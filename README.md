@@ -1,8 +1,3 @@
-Here’s the **complete, unified README.md** with all instructions, code, and styling in one cohesive document:
-
----
-
-```markdown
 # 🚀 Flutter Compiler for Acode  
 **Turn your Android device into a Flutter development powerhouse**  
 *By [Mikael Kraft](https://github.com/mikaelkraft)*  
