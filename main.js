@@ -77,6 +77,26 @@ class FlutterTools {
   }
 }
 
+
+//Cloud fallback
+const CLOUD_URL = "https://your-project-name.deno.dev";
+const API_KEY = Deno.env.get("API_KEY"); // Same as in mod.ts
+
+async function cloudFallback(command) {
+  const response = await fetch(CLOUD_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${API_KEY}`
+    },
+    body: JSON.stringify({
+      cmd: command,
+      project: await getProjectGitRemote() // Implement this
+    })
+  });
+  return await response.json();
+}
+
 // Plugin UI Setup
 acode.setPluginMenu("🩺 Flutter Doctor", () => FlutterTools.doctor().then(res => acode.toast(res.message)));
 acode.setPluginMenu("📦 Pub Get", () => FlutterTools.pubGet().then(res => acode.toast(res.message)));

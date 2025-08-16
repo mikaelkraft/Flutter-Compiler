@@ -4,7 +4,7 @@ import { exec } from "https://deno.land/x/exec/mod.ts";
 Deno.serve(async (req) => {
   // 1. Auth check (optional)
   const auth = req.headers.get("Authorization");
-  if (auth !== "Bearer YOUR_SECRET_KEY") {
+  if (auth !== "Bearer ${API_KEY}") {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -19,6 +19,13 @@ Deno.serve(async (req) => {
     await exec(cloneCmd);
     const result = await exec(`${cmd}`, { cwd: tempDir });
     
+// Rate limiting
+const IP = req.headers.get("X-Real-IP");
+const rateLimit = await checkRateLimit(IP); // Implement storage
+if (rateLimit.limited) {
+  return new Response("Too many requests", { status: 429 });
+}
+
     // Cleanup
     await exec(`rm -rf ${tempDir}`);
     
