@@ -138,5 +138,3 @@ MIT © [Mikael Kraft](https://github.com/mikaelkraft)
 
 [![Get on Acode](https://img.shields.io/badge/Acode-Plugin_Store-green)](https://acode.foxdebug.com/plugins)  
 ```
-
-further!
