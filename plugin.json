@@ -1,0 +1,9 @@
+{
+  "name": "Flutter Compiler",
+  "version": "1.0.0",
+  "author": "Mikael Kraft",
+  "github": "https://github.io/mikaelkraft",
+  "main": "main.js",
+  "icon": "assets/flutter_icon.png",
+  "permissions": ["exec", "file"]
+}
