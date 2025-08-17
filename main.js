@@ -6,7 +6,7 @@ class FlutterCompiler {
   // Configuration (Safe Defaults)
   static config = {
     cloudEnabled: true,
-    cloudEndpoint: "https://flutter-compiler-api.deno.dev", // Shared endpoint
+    cloudEndpoint: "https://flutter-compiler.mikaelkraft.deno.net/", // Shared endpoint
     termuxPath: "$HOME/flutter/bin",
     preferLocal: true
   };
