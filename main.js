@@ -1,120 +1,186 @@
-// Flutter Compiler Plugin for Acode
+// Flutter Compiler for Acode
 // By Mikael Kraft (@mikaelkraft)
+// Version 1.0.1
 
-class FlutterTools {
-  static async runCommand(command) {
+class FlutterCompiler {
+  // Configuration (Safe Defaults)
+  static config = {
+    cloudEnabled: true,
+    cloudEndpoint: "https://flutter-compiler-api.deno.dev", // Shared endpoint
+    termuxPath: "$HOME/flutter/bin",
+    preferLocal: true
+  };
+
+  /* [INITIALIZATION] */
+  static async init() {
+    // Load saved config
+    const savedConfig = await acode.getSecureConfig("flutter_compiler");
+    if (savedConfig) {
+      this.config = { ...this.config, ...JSON.parse(savedConfig) };
+    }
+    
+    // First-run setup
+    const isFirstRun = !(await acode.exec(`[ -d "${this.config.termuxPath}" ] && echo "1"`));
+    if (isFirstRun) {
+      acode.toast("⚙️ Setting up Flutter for first use...");
+      await this._installFlutter();
+    }
+  }
+
+  static async _installFlutter() {
+    const installCmd = `
+      pkg update -y && 
+      pkg install -y git wget openjdk-17 dart && 
+      wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.22.2-stable.tar.xz && 
+      tar xf flutter_linux_*.tar.xz && 
+      echo 'export PATH="\\$PATH:\\$HOME/flutter/bin"' >> ~/.bashrc && 
+      source ~/.bashrc
+    `;
+    
+    await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${installCmd}"`);
+  }
+
+  /* [CORE EXECUTION] */
+  static async execute(command) {
+    if (this.config.preferLocal) {
+      const localResult = await this._executeLocal(command);
+      if (localResult.success) return localResult;
+    }
+    
+    if (this.config.cloudEnabled) {
+      return await this._executeCloud(command);
+    }
+    
+    return {
+      success: false,
+      message: "❌ All execution methods failed"
+    };
+  }
+
+  /* [LOCAL EXECUTION] */
+  static async _executeLocal(command) {
     try {
       const projectDir = await editor.getProjectDir();
       const termuxCmd = `
         cd ${projectDir} &&
-        [ ! -d "$HOME/flutter" ] && ./termux_install.sh ||
-        export PATH="$PATH:$HOME/flutter/bin" &&
+        export PATH="$PATH:${this.config.termuxPath}" &&
         ${command}
       `;
       
       await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${termuxCmd}"`);
-      return { success: true, message: `✅ ${command} executed` };
+      return { success: true, message: `📱 Local: ${command.split(' ')[0]}` };
     } catch (e) {
-      return { success: false, message: `❌ ${command} failed: ${e.message}` };
+      return { success: false, message: `❌ Local: ${e.message}` };
     }
   }
 
-  // Core Flutter Commands
-  static async doctor() {
-    return this.runCommand("flutter doctor");
-  }
-
-  static async pubGet() {
-    return this.runCommand("flutter pub get");
-  }
-
-  static async buildApk() {
-    return this.runCommand("flutter build apk --release");
-  }
-
-  static async buildAppBundle() {
-    return this.runCommand("flutter build appbundle");
-  }
-
-  static async runApp() {
-    return this.runCommand("flutter run");
-  }
-
-  // Dart Commands
-  static async analyze() {
-    return this.runCommand("dart analyze");
-  }
-
-  static async formatCode() {
-    return this.runCommand("dart format .");
-  }
-
-  static async runTests() {
-    return this.runCommand("flutter test");
-  }
-
-  // FlutterFire Setup
-  static async installFlutterFire() {
-    const res = await this.runCommand("dart pub global activate flutterfire_cli");
-    if (res.success) {
-      return this.runCommand("flutterfire configure");
+  /* [CLOUD EXECUTION] */
+  static async _executeCloud(command) {
+    try {
+      const projectDir = await editor.getProjectDir();
+      const projectId = await this._getProjectId(projectDir);
+      
+      const response = await fetch(this.config.cloudEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cmd: command,
+          project: projectId
+        })
+      });
+      
+      const result = await response.json();
+      return result.success ? 
+        { success: true, message: `☁️ ${result.output}` } : 
+        { success: false, message: `❌ Cloud: ${result.error}` };
+    } catch (e) {
+      return { success: false, message: `☁️ Cloud connection failed` };
     }
-    return res;
   }
 
-  // Firebase Tools
-  static async deployToFirebase() {
-    return this.runCommand("flutter pub run flutterfire_cli:flutterfire deploy");
+  static async _getProjectId(projectDir) {
+    try {
+      const gitHash = await acode.exec(`cd ${projectDir} && git rev-parse HEAD 2>/dev/null`);
+      return `git:${await acode.hash(gitHash)}`;
+    } catch {
+      return `local:${await acode.hash(Math.random().toString())}`;
+    }
   }
 
-  // Clean/Repair
-  static async cleanProject() {
-    return this.runCommand("flutter clean");
+  /* [FLUTTER COMMANDS] */
+  static async doctor() { return this.execute("flutter doctor --no-upgrade"); }
+  static async pubGet() { return this.execute("flutter pub get"); }
+  static async buildApk() { return this.execute("flutter build apk --release"); }
+  static async buildAppBundle() { return this.execute("flutter build appbundle"); }
+  static async runApp() { return this.execute("flutter run"); }
+  static async analyze() { return this.execute("dart analyze"); }
+  static async format() { return this.execute("dart format ."); }
+  static async test() { return this.execute("flutter test"); }
+  static async clean() { return this.execute("flutter clean"); }
+  static async repair() { return this.execute("flutter pub upgrade --major-versions"); }
+  
+  /* [FLUTTERFIRE COMMANDS] */
+  static async flutterfire() { 
+    const res = await this.execute("dart pub global activate flutterfire_cli");
+    return res.success ? this.execute("flutterfire configure") : res;
   }
-
-  static async repairPackages() {
-    return this.runCommand("flutter pub upgrade --major-versions");
+  
+  static async firebaseDeploy() {
+    return this.execute("flutter pub run flutterfire_cli:flutterfire deploy");
   }
 }
 
-
-//Cloud fallback
-const CLOUD_URL = "https://your-project-name.deno.dev";
-const API_KEY = Deno.env.get("API_KEY"); // Same as in mod.ts
-
-async function cloudFallback(command) {
-  const response = await fetch(CLOUD_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${API_KEY}`
-    },
-    body: JSON.stringify({
-      cmd: command,
-      project: await getProjectGitRemote() // Implement this
-    })
-  });
-  return await response.json();
-}
-
-// Plugin UI Setup
-acode.setPluginMenu("🩺 Flutter Doctor", () => FlutterTools.doctor().then(res => acode.toast(res.message)));
-acode.setPluginMenu("📦 Pub Get", () => FlutterTools.pubGet().then(res => acode.toast(res.message)));
-acode.setPluginMenu("🚀 Run App", () => FlutterTools.runApp().then(res => acode.toast(res.message)));
-acode.setPluginMenu("🔧 Build APK", () => FlutterTools.buildApk().then(res => acode.toast(res.message)));
-acode.setPluginMenu("📦 Build AppBundle", () => FlutterTools.buildAppBundle().then(res => acode.toast(res.message)));
-acode.setPluginMenu("🔥 FlutterFire Setup", () => FlutterTools.installFlutterFire().then(res => acode.toast(res.message)));
-acode.setPluginMenu("☁️ Firebase Deploy", () => FlutterTools.deployToFirebase().then(res => acode.toast(res.message)));
-acode.setPluginMenu("🧹 Clean Project", () => FlutterTools.cleanProject().then(res => acode.toast(res.message)));
-acode.setPluginMenu("🔄 Repair Packages", () => FlutterTools.repairPackages().then(res => acode.toast(res.message)));
-acode.setPluginMenu("🔍 Code Analysis", () => FlutterTools.analyze().then(res => acode.toast(res.message)));
-acode.setPluginMenu("✨ Format Code", () => FlutterTools.formatCode().then(res => acode.toast(res.message)));
-acode.setPluginMenu("🧪 Run Tests", () => FlutterTools.runTests().then(res => acode.toast(res.message)));
-
-// Initialize Flutter on first run
+/* [PLUGIN UI SETUP] */
+// Initialize
 acode.on("initialize", async () => {
-  const hasFlutter = await acode.exec('[ -d "$HOME/flutter" ] && echo "1"');
-  if (!hasFlutter) {
-    acode.toast("⚙️ First-time setup: Flutter will be installed automatically");
-  }
+  await FlutterCompiler.init();
+});
+
+// Settings Menu
+acode.setPluginMenu("⚙️ Settings", () => {
+  acode.showInputDialog("Compiler Configuration", [
+    {
+      label: "Cloud Endpoint URL",
+      type: "text",
+      value: FlutterCompiler.config.cloudEndpoint
+    },
+    {
+      label: "Enable Cloud",
+      type: "checkbox",
+      checked: FlutterCompiler.config.cloudEnabled
+    },
+    {
+      label: "Prefer Local Execution",
+      type: "checkbox",
+      checked: FlutterCompiler.config.preferLocal
+    }
+  ], async (values) => {
+    FlutterCompiler.config.cloudEndpoint = values[0];
+    FlutterCompiler.config.cloudEnabled = values[1];
+    FlutterCompiler.config.preferLocal = values[2];
+    await acode.setSecureConfig("flutter_compiler", JSON.stringify(FlutterCompiler.config));
+    acode.toast("✅ Settings saved");
+  });
+});
+
+// Full Command Menu
+const commandMenu = [
+  { icon: "🩺", name: "Flutter Doctor", cmd: "doctor" },
+  { icon: "📦", name: "Pub Get", cmd: "pubGet" },
+  { icon: "🚀", name: "Run App", cmd: "runApp" },
+  { icon: "🔧", name: "Build APK", cmd: "buildApk" },
+  { icon: "📦", name: "Build AppBundle", cmd: "buildAppBundle" },
+  { icon: "🔥", name: "FlutterFire Setup", cmd: "flutterfire" },
+  { icon: "☁️", name: "Firebase Deploy", cmd: "firebaseDeploy" },
+  { icon: "🧹", name: "Clean Project", cmd: "clean" },
+  { icon: "🔄", name: "Repair Packages", cmd: "repair" },
+  { icon: "🔍", name: "Code Analysis", cmd: "analyze" },
+  { icon: "✨", name: "Format Code", cmd: "format" },
+  { icon: "🧪", name: "Run Tests", cmd: "test" }
+];
+
+commandMenu.forEach(({icon, name, cmd}) => {
+  acode.setPluginMenu(`${icon} ${name}`, () => 
+    FlutterCompiler[cmd]().then(res => acode.toast(res.message))
+  );
 });

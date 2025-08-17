@@ -1,11 +1,12 @@
 {
   "name": "Flutter Compiler",
-  "name": "Flutter Compiler",
-  "repository": "https://github.com/mikaelkraft/Flutter-Compiler",
+  "repository":
+"https://github.com/mikaelkraft/Flutter-Compiler",
   "version": "1.0.1",
   "author": "Mikael Kraft",
   "github": "mikaelkraft",
   "main": "main.js",
   "icon": "assets/flutter_icon.png",
+  "description": "Turn your Android device into a Flutter development powerhouse",
   "permissions": ["exec", "file"]
 }
