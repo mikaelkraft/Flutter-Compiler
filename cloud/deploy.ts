@@ -1,54 +1,98 @@
-// deploy.ts
+// cloud/deploy.ts - Secure Backend
+const AUTH_TOKEN = "f8a7dad00c84f93ebb4b4ebb48c7b0dce9b761dd0a4fde37e67c6d341a673bfd";
+
 Deno.serve(async (req) => {
-  // 1. Validate request
+  // 1. Auth & Validation
   if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+    return errorResponse(405, "Method not allowed");
   }
 
-  // 2. Parse payload
-  const { cmd, project } = await req.json().catch(() => ({}));
-  if (!cmd) return new Response("Bad request", { status: 400 });
+  if (req.headers.get("Authorization") !== `Bearer ${AUTH_TOKEN}`) {
+    return errorResponse(401, "Unauthorized");
+  }
 
-  // 3. Execute in isolated environment
+  // 2. Parse Payload
+  let payload;
   try {
-    const tempDir = `tmp_${Date.now()}`;
+    payload = await req.json();
+    if (!payload?.cmd) throw new Error("Missing command");
+    if (Date.now() - payload.timestamp > 60000) {
+      throw new Error("Request expired");
+    }
+  } catch (e) {
+    return errorResponse(400, e.message);
+  }
+
+  // 3. Execution
+  try {
+    console.log(`Processing: ${payload.cmd}`, payload.project ? "(with project)" : "");
     
-    // Clone if Git project
-    if (project?.startsWith("git:")) {
-      const repoUrl = project.replace("git:", "https://");
-      await Deno.run({ cmd: ["git", "clone", repoUrl, tempDir] }).status();
+    let tempDir;
+    if (payload.project?.startsWith("git:")) {
+      tempDir = await setupProject(payload.project);
     }
 
-    // Run command
-    const process = Deno.run({
-      cmd: cmd.split(" "),
-      cwd: project?.startsWith("git:") ? tempDir : undefined,
-      stdout: "piped",
-      stderr: "piped"
+    const result = await runCommand(payload.cmd, tempDir);
+    
+    console.log(`Completed: ${payload.cmd}`, 
+      result.success ? "✅" : "❌", 
+      result.output?.substring(0, 100) || result.error);
+
+    return new Response(JSON.stringify(result), {
+      headers: { "Content-Type": "application/json" }
     });
 
-    const [status, stdout, stderr] = await Promise.all([
-      process.status(),
-      process.output(),
-      process.stderrOutput()
-    ]);
-
-    // Cleanup
-    if (project?.startsWith("git:")) {
-      await Deno.remove(tempDir, { recursive: true });
-    }
-
-    // Return results
-    return new Response(JSON.stringify({
-      success: status.success,
-      output: new TextDecoder().decode(stdout),
-      error: status.success ? null : new TextDecoder().decode(stderr)
-    }));
-
   } catch (e) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: e.message
-    }), { status: 500 });
+    console.error("Execution failed:", e);
+    return errorResponse(500, e.message);
   }
 });
+
+// Helpers
+async function setupProject(gitUrl) {
+  const tempDir = `tmp_${Date.now()}`;
+  const repoUrl = gitUrl.replace("git:", "https://");
+  
+  console.log(`Cloning: ${repoUrl}`);
+  const clone = Deno.run({
+    cmd: ["git", "clone", repoUrl, tempDir],
+    stderr: "piped"
+  });
+  
+  if (!(await clone.status()).success) {
+    throw new Error("Git clone failed");
+  }
+  
+  return tempDir;
+}
+
+async function runCommand(cmd, cwd) {
+  console.log(`Running: ${cmd}`, cwd ? `in ${cwd}` : "");
+  
+  const process = Deno.run({
+    cmd: cmd.split(" "),
+    cwd,
+    stdout: "piped",
+    stderr: "piped"
+  });
+
+  const [status, stdout, stderr] = await Promise.all([
+    process.status(),
+    process.output(),
+    process.stderrOutput()
+  ]);
+
+  return {
+    success: status.success,
+    output: new TextDecoder().decode(stdout),
+    error: status.success ? null : new TextDecoder().decode(stderr)
+  };
+}
+
+function errorResponse(status, message) {
+  console.error(`Error ${status}: ${message}`);
+  return new Response(JSON.stringify({
+    success: false,
+    error: message
+  }), { status });
+}

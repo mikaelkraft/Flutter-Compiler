@@ -1,8 +1,7 @@
 {
-  "name": "flutter-compiler-cloud",
-  "entry": "deploy.ts",  // Deno entry point
-  "permissions": {
-    "net": true,
-    "run": true
+  "name": "flutter-compiler-backend",
+  "exports": "./deploy.ts",
+  "tasks": {
+    "deploy": "deno deploy --allow-net --allow-run --allow-read --allow-write deploy.ts"
   }
 }

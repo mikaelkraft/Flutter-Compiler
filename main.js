@@ -6,9 +6,11 @@ class FlutterCompiler {
   // Configuration (Safe Defaults)
   static config = {
     cloudEnabled: true,
-    cloudEndpoint: "https://flutter-compiler.mikaelkraft.deno.net/", // Shared endpoint
+    cloudEndpoint: "https://flutter-compiler.mikaelkraft.deno.net/",
+    apiKey: "f8a7dad00c84f93ebb4b4ebb48c7b0dce9b761dd0a4fde37e67c6d341a673bfd",
     termuxPath: "$HOME/flutter/bin",
-    preferLocal: true
+    preferLocal: true,
+    debugMode: false
   };
 
   /* [INITIALIZATION] */
@@ -22,6 +24,7 @@ class FlutterCompiler {
     // First-run setup
     const isFirstRun = !(await acode.exec(`[ -d "${this.config.termuxPath}" ] && echo "1"`));
     if (isFirstRun) {
+      this._log("First run detected - installing Flutter");
       acode.toast("⚙️ Setting up Flutter for first use...");
       await this._installFlutter();
     }
@@ -38,13 +41,17 @@ class FlutterCompiler {
     `;
     
     await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${installCmd}"`);
+    this._log("Flutter installation completed");
   }
 
   /* [CORE EXECUTION] */
   static async execute(command) {
+    this._log(`Executing: ${command}`);
+    
     if (this.config.preferLocal) {
       const localResult = await this._executeLocal(command);
       if (localResult.success) return localResult;
+      this._log(`Local execution failed: ${localResult.message}`);
     }
     
     if (this.config.cloudEnabled) {
@@ -80,21 +87,33 @@ class FlutterCompiler {
       const projectDir = await editor.getProjectDir();
       const projectId = await this._getProjectId(projectDir);
       
+      const payload = {
+        cmd: command,
+        project: projectId,
+        timestamp: Date.now()
+      };
+
+      this._log(`Sending to cloud: ${JSON.stringify(payload, null, 2)}`);
+      
       const response = await fetch(this.config.cloudEndpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cmd: command,
-          project: projectId
-        })
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.config.apiKey}`
+        },
+        body: JSON.stringify(payload)
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       
       const result = await response.json();
-      return result.success ? 
-        { success: true, message: `☁️ ${result.output}` } : 
-        { success: false, message: `❌ Cloud: ${result.error}` };
+      this._log(`Cloud response: ${JSON.stringify(result, null, 2)}`);
+      return result;
     } catch (e) {
-      return { success: false, message: `☁️ Cloud connection failed` };
+      this._log(`Cloud error: ${e.message}`, true);
+      return { success: false, message: `☁️ ${e.message}` };
     }
   }
 
@@ -105,6 +124,14 @@ class FlutterCompiler {
     } catch {
       return `local:${await acode.hash(Math.random().toString())}`;
     }
+  }
+
+  /* [LOGGING] */
+  static _log(message, isError = false) {
+    if (!this.config.debugMode) return;
+    const logLine = `[FlutterCompiler] ${new Date().toISOString()} ${message}`;
+    console.log(logLine);
+    if (isError) acode.toast(`FLUTTER ERROR: ${message}`, 3000);
   }
 
   /* [FLUTTER COMMANDS] */
@@ -153,11 +180,17 @@ acode.setPluginMenu("⚙️ Settings", () => {
       label: "Prefer Local Execution",
       type: "checkbox",
       checked: FlutterCompiler.config.preferLocal
+    },
+    {
+      label: "Debug Mode",
+      type: "checkbox",
+      checked: FlutterCompiler.config.debugMode
     }
   ], async (values) => {
     FlutterCompiler.config.cloudEndpoint = values[0];
     FlutterCompiler.config.cloudEnabled = values[1];
     FlutterCompiler.config.preferLocal = values[2];
+    FlutterCompiler.config.debugMode = values[3];
     await acode.setSecureConfig("flutter_compiler", JSON.stringify(FlutterCompiler.config));
     acode.toast("✅ Settings saved");
   });
@@ -182,5 +215,4 @@ const commandMenu = [
 commandMenu.forEach(({icon, name, cmd}) => {
   acode.setPluginMenu(`${icon} ${name}`, () => 
     FlutterCompiler[cmd]().then(res => acode.toast(res.message))
-  );
 });
