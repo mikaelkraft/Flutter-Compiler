@@ -1,7 +1,17 @@
 // cloud/deploy.ts - Secure Backend
+
 const AUTH_TOKEN = "f8a7dad00c84f93ebb4b4ebb48c7b0dce9b761dd0a4fde37e67c6d341a673bfd";
 
+// GET requests
 Deno.serve(async (req) => {
+  // Handle GET requests for health checks
+  if (req.method === "GET") {
+    return new Response("Flutter Compiler API - Online", { 
+      status: 200,
+      headers: { "Content-Type": "text/plain" } 
+    });
+  }
+
   // 1. Auth & Validation
   if (req.method !== "POST") {
     return errorResponse(405, "Method not allowed");

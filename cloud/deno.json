@@ -2,6 +2,7 @@
   "name": "flutter-compiler-backend",
   "exports": "./deploy.ts",
   "tasks": {
-    "deploy": "deno deploy --allow-net --allow-run --allow-read --allow-write deploy.ts"
+    "deploy": "deno deploy --project=flutter-compiler deploy.ts",
+    "deploy-with-perms": "deno run --allow-all deploy.ts"
   }
 }
