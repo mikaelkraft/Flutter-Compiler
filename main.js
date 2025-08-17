@@ -2,12 +2,24 @@
 // By Mikael Kraft (@mikaelkraft)
 // Version 1.0.1
 
+// Improved Environment Configuration
+const ENV_CONFIG = (() => {
+  const token = Deno.env.get("AUTH_TOKEN");
+  if (!token && typeof acode !== 'undefined') {
+    acode.toast("⚠️ AUTH_TOKEN not set - cloud features disabled", 3000);
+  }
+  return {
+    AUTH_TOKEN: token,
+    CLOUD_ENDPOINT: "https://flutter-compiler.mikaelkraft.deno.net/"
+  };
+})();
+
 class FlutterCompiler {
-  // Configuration (Safe Defaults)
+  // Configuration with better defaults handling
   static config = {
-    cloudEnabled: true,
-    cloudEndpoint: "https://flutter-compiler.mikaelkraft.deno.net/",
-    apiKey: "f8a7dad00c84f93ebb4b4ebb48c7b0dce9b761dd0a4fde37e67c6d341a673bfd",
+    cloudEnabled: Boolean(ENV_CONFIG.AUTH_TOKEN),
+    cloudEndpoint: ENV_CONFIG.CLOUD_ENDPOINT,
+    apiKey: ENV_CONFIG.AUTH_TOKEN,
     termuxPath: "$HOME/flutter/bin",
     preferLocal: true,
     debugMode: false
@@ -15,23 +27,30 @@ class FlutterCompiler {
 
   /* [INITIALIZATION] */
   static async init() {
-    // Load saved config
-    const savedConfig = await acode.getSecureConfig("flutter_compiler");
-    if (savedConfig) {
-      this.config = { ...this.config, ...JSON.parse(savedConfig) };
+    try {
+      const savedConfig = await acode.getSecureConfig("flutter_compiler");
+      if (savedConfig) {
+        this.config = { ...this.config, ...JSON.parse(savedConfig) };
+      }
+      
+      if (!(await this._checkFlutterExists())) {
+        await this._installFlutter();
+      }
+    } catch (e) {
+      this._log(`Initialization failed: ${e.message}`, true);
     }
-    
-    // First-run setup
-    const isFirstRun = !(await acode.exec(`[ -d "${this.config.termuxPath}" ] && echo "1"`));
-    if (isFirstRun) {
-      this._log("First run detected - installing Flutter");
-      acode.toast("⚙️ Setting up Flutter for first use...");
-      await this._installFlutter();
+  }
+
+  static async _checkFlutterExists() {
+    try {
+      return await acode.exec(`[ -d "${this.config.termuxPath}" ] && echo "1"`);
+    } catch {
+      return false;
     }
   }
 
   static async _installFlutter() {
-    const installCmd = `
+    const INSTALL_CMD = `
       pkg update -y && 
       pkg install -y git wget openjdk-17 dart && 
       wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.22.2-stable.tar.xz && 
@@ -40,8 +59,14 @@ class FlutterCompiler {
       source ~/.bashrc
     `;
     
-    await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${installCmd}"`);
-    this._log("Flutter installation completed");
+    try {
+      acode.toast("⚙️ Setting up Flutter...");
+      await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${INSTALL_CMD}"`);
+      this._log("Flutter installation completed");
+    } catch (e) {
+      this._log(`Installation failed: ${e.message}`, true);
+      throw e;
+    }
   }
 
   /* [CORE EXECUTION] */
@@ -55,7 +80,11 @@ class FlutterCompiler {
     }
     
     if (this.config.cloudEnabled) {
-      return await this._executeCloud(command);
+      try {
+        return await this._executeCloud(command);
+      } catch (e) {
+        this._log(`Cloud execution failed: ${e.message}`);
+      }
     }
     
     return {
@@ -75,25 +104,32 @@ class FlutterCompiler {
       `;
       
       await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${termuxCmd}"`);
-      return { success: true, message: `📱 Local: ${command.split(' ')[0]}` };
+      return { 
+        success: true, 
+        message: `📱 Local: ${command.split(' ')[0]}` 
+      };
     } catch (e) {
-      return { success: false, message: `❌ Local: ${e.message}` };
+      return { 
+        success: false, 
+        message: `❌ Local: ${e.message}` 
+      };
     }
   }
 
-  /* [CLOUD EXECUTION] */
-  static async _executeCloud(command) {
+  /* [CLOUD EXECUTION] - Improved with timeout */
+  static async _executeCloud(command, timeout = 10000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
     try {
       const projectDir = await editor.getProjectDir();
-      const projectId = await this._getProjectId(projectDir);
-      
       const payload = {
         cmd: command,
-        project: projectId,
+        project: await this._getProjectId(projectDir),
         timestamp: Date.now()
       };
 
-      this._log(`Sending to cloud: ${JSON.stringify(payload, null, 2)}`);
+      this._log(`Cloud request: ${command}`);
       
       const response = await fetch(this.config.cloudEndpoint, {
         method: "POST",
@@ -101,19 +137,20 @@ class FlutterCompiler {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${this.config.apiKey}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`HTTP ${response.status}`);
       }
       
-      const result = await response.json();
-      this._log(`Cloud response: ${JSON.stringify(result, null, 2)}`);
-      return result;
+      return await response.json();
     } catch (e) {
-      this._log(`Cloud error: ${e.message}`, true);
-      return { success: false, message: `☁️ ${e.message}` };
+      clearTimeout(timeoutId);
+      throw e;
     }
   }
 
@@ -126,78 +163,61 @@ class FlutterCompiler {
     }
   }
 
-  /* [LOGGING] */
+  /* [LOGGING] - Enhanced */
   static _log(message, isError = false) {
     if (!this.config.debugMode) return;
-    const logLine = `[FlutterCompiler] ${new Date().toISOString()} ${message}`;
-    console.log(logLine);
-    if (isError) acode.toast(`FLUTTER ERROR: ${message}`, 3000);
+    const timestamp = new Date().toLocaleTimeString();
+    console.log(`[Flutter][${timestamp}] ${message}`);
+    if (isError) {
+      acode.toast(`Flutter: ${message.substring(0, 50)}`, 3000);
+    }
   }
 
-  /* [FLUTTER COMMANDS] */
-  static async doctor() { return this.execute("flutter doctor --no-upgrade"); }
-  static async pubGet() { return this.execute("flutter pub get"); }
-  static async buildApk() { return this.execute("flutter build apk --release"); }
-  static async buildAppBundle() { return this.execute("flutter build appbundle"); }
-  static async runApp() { return this.execute("flutter run"); }
-  static async analyze() { return this.execute("dart analyze"); }
-  static async format() { return this.execute("dart format ."); }
-  static async test() { return this.execute("flutter test"); }
-  static async clean() { return this.execute("flutter clean"); }
-  static async repair() { return this.execute("flutter pub upgrade --major-versions"); }
+  /* [COMMAND SHORTCUTS] */
+  static doctor = () => this.execute("flutter doctor --no-upgrade");
+  static pubGet = () => this.execute("flutter pub get");
+  static buildApk = () => this.execute("flutter build apk --release");
+  static buildAppBundle = () => this.execute("flutter build appbundle");
+  static runApp = () => this.execute("flutter run");
+  static analyze = () => this.execute("dart analyze");
+  static format = () => this.execute("dart format .");
+  static test = () => this.execute("flutter test");
+  static clean = () => this.execute("flutter clean");
+  static repair = () => this.execute("flutter pub upgrade --major-versions");
   
-  /* [FLUTTERFIRE COMMANDS] */
   static async flutterfire() { 
     const res = await this.execute("dart pub global activate flutterfire_cli");
     return res.success ? this.execute("flutterfire configure") : res;
   }
   
-  static async firebaseDeploy() {
-    return this.execute("flutter pub run flutterfire_cli:flutterfire deploy");
-  }
+  static firebaseDeploy = () => this.execute("flutter pub run flutterfire_cli:flutterfire deploy");
 }
 
-/* [PLUGIN UI SETUP] */
-// Initialize
-acode.on("initialize", async () => {
-  await FlutterCompiler.init();
-});
+/* [PLUGIN UI] */
+acode.on("initialize", FlutterCompiler.init);
 
 // Settings Menu
 acode.setPluginMenu("⚙️ Settings", () => {
-  acode.showInputDialog("Compiler Configuration", [
-    {
-      label: "Cloud Endpoint URL",
-      type: "text",
-      value: FlutterCompiler.config.cloudEndpoint
-    },
-    {
-      label: "Enable Cloud",
-      type: "checkbox",
-      checked: FlutterCompiler.config.cloudEnabled
-    },
-    {
-      label: "Prefer Local Execution",
-      type: "checkbox",
-      checked: FlutterCompiler.config.preferLocal
-    },
-    {
-      label: "Debug Mode",
-      type: "checkbox",
-      checked: FlutterCompiler.config.debugMode
-    }
+  acode.showInputDialog("Compiler Settings", [
+    { label: "Cloud Endpoint", type: "text", value: FlutterCompiler.config.cloudEndpoint },
+    { label: "Enable Cloud", type: "checkbox", checked: FlutterCompiler.config.cloudEnabled },
+    { label: "Prefer Local", type: "checkbox", checked: FlutterCompiler.config.preferLocal },
+    { label: "Debug Mode", type: "checkbox", checked: FlutterCompiler.config.debugMode }
   ], async (values) => {
-    FlutterCompiler.config.cloudEndpoint = values[0];
-    FlutterCompiler.config.cloudEnabled = values[1];
-    FlutterCompiler.config.preferLocal = values[2];
-    FlutterCompiler.config.debugMode = values[3];
+    FlutterCompiler.config = { 
+      ...FlutterCompiler.config,
+      cloudEndpoint: values[0],
+      cloudEnabled: values[1],
+      preferLocal: values[2],
+      debugMode: values[3]
+    };
     await acode.setSecureConfig("flutter_compiler", JSON.stringify(FlutterCompiler.config));
     acode.toast("✅ Settings saved");
   });
 });
 
-// Full Command Menu
-const commandMenu = [
+// Command Menu
+[
   { icon: "🩺", name: "Flutter Doctor", cmd: "doctor" },
   { icon: "📦", name: "Pub Get", cmd: "pubGet" },
   { icon: "🚀", name: "Run App", cmd: "runApp" },
@@ -210,9 +230,7 @@ const commandMenu = [
   { icon: "🔍", name: "Code Analysis", cmd: "analyze" },
   { icon: "✨", name: "Format Code", cmd: "format" },
   { icon: "🧪", name: "Run Tests", cmd: "test" }
-];
-
-commandMenu.forEach(({icon, name, cmd}) => {
+].forEach(({icon, name, cmd}) => {
   acode.setPluginMenu(`${icon} ${name}`, () => 
     FlutterCompiler[cmd]().then(res => acode.toast(res.message))
 });
