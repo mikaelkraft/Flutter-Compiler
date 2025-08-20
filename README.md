@@ -1,8 +1,8 @@
 
 ```markdown
-# 🚀 Flutter Compiler for Acode  
-**Turn your Android device into a full Flutter development environment**  
-*By [Mikael Kraft](https://github.com/mikaelkraft)*  
+- # 🚀 Flutter Compiler for Acode  
+- **Turn your Android device into a full Flutter development environment**  
+- *By [Mikael Kraft](https://github.com/mikaelkraft)*  
 
 ![Flutter Logo](assets/flutter_icon.png)  
 
