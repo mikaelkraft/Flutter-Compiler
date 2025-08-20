@@ -1,12 +1,46 @@
 {
   "name": "Flutter Compiler",
-  "repository":
-"https://github.com/mikaelkraft/Flutter-Compiler",
-  "version": "1.0.1",
-  "author": "Mikael Kraft",
+  "repository": "https://github.com/mikaelkraft/Flutter-Compiler",
+  "version": "1.0.2",
+  "author": "Mikael Kraft (@mikaelkraft)",
+  "description": {
+    "short": "Full Flutter development on Android",
+    "full": [
+      "Transform your Android device into a complete Flutter development environment.",
+      "",
+      "Features:",
+      "- One-tap Flutter SDK installation",
+      "- Full Flutter/Dart command support",
+      "- Firebase tools integration",
+      "- Termux-powered local execution",
+      "",
+      "Support Development:",
+      "• [GitHub Sponsors](https://github.com/sponsors/mikaelkraft)",
+      "• [Buy Me a Coffee](https://buymeacoffee.com/mikaelkraft)",
+      "• [Report Issues](https://github.com/mikaelkraft/Flutter-Compiler/issues)",
+      "",
+      "Need Help? Join our [Discord Community](https://discord.gg/your-invite-link)"
+    ]
+  },
+  "links": {
+    "support": "https://github.com/mikaelkraft/Flutter-Compiler/discussions",
+    "donate": "https://github.com/sponsors/mikaelkraft",
+    "documentation": "https://github.com/mikaelkraft/Flutter-Compiler/wiki"
+  },
+  "license": "MIT",
   "github": "mikaelkraft",
   "main": "main.js",
   "icon": "assets/flutter_icon.png",
-  "description": "Turn your Android device into a Flutter development powerhouse",
-  "permissions": ["exec", "file"]
+  "description": "Turn your Android device into a Flutter development powerhouse - Build, run, and deploy Flutter apps directly from Termux",
+  "permissions": ["exec", "file", "storage"],
+  "assets": ["assets/flutter_icon.png", "assets/termux_install.sh"],
+  "acodeVersion": "1.11.1",
+  "dependencies": {
+    "termux-api": ">=0.50"
+  },
+  "tags": ["flutter", "dart", "mobile-development", "android", "termux"],
+  "changelog": {
+    "1.0.2": "Optimized for local-only execution with enhanced Termux integration",
+    "1.0.1": "Initial release"
+  }
 }

@@ -1,57 +1,60 @@
+
+```markdown
 # 🚀 Flutter Compiler for Acode  
-**Turn your Android device into a Flutter development powerhouse**  
+**Turn your Android device into a full Flutter development environment**  
 *By [Mikael Kraft](https://github.com/mikaelkraft)*  
 
-![Flutter+Acode Banner](assets/flutter_icon.png)  
+![Flutter Logo](assets/flutter_icon.png)  
 
 ---
 
 ## ✨ Features  
-- **Zero-config Flutter SDK installer** (Auto-deploys via Termux)  
-- **Full Flutter/Dart command support**:  
+- **One-tap Flutter SDK installer** (via Termux)  
+- **Complete Flutter/Dart toolchain**:  
   ```bash
-  flutter run | build | pub get | doctor
+  flutter create | run | build | pub get | doctor
   dart analyze | format | test
   ```  
-- **Firebase Tools**:  
+- **Firebase Tools integration**:  
   ```bash
   flutterfire configure | deploy
   ```  
-- **Cloud fallback** for low-end devices  
 
 ---
 
 ## 📥 Installation  
 
-### **Prerequisites**  
+### Prerequisites  
 1. [Acode Editor](https://play.google.com/store/apps/details?id=com.foxdebug.acodefree)  
-2. [Termux (F-Droid)](https://f-droid.org/en/packages/com.termux/)  
+2. [Termux (F-Droid)](https://f-droid.org/en/packages/com.termux/)
+3. [Acode X Terminal (Acode Plugin)] download from Acode's plugin directory.
 
-### **Installation Methods**  
-#### **Method 1: One-Click Install**  
-Paste this in Acode's plugin installer:  
+### Installation  
+1. In Acode:  
+   ```
+   Settings → Plugins → Install from URL:
+   https://github.com/mikaelkraft/Flutter-Compiler
+   ```  
+## Or
+1. Install Termux from [F-Droid](https://f-droid.org/)
+2. Run below in Termux:
+
 ```
-https://acode.foxdebug.com/plugin/install?url=https://github.com/mikaelkraft/Flutter-Compiler/releases/download/v1.0.1/Flutter-Compiler.zip
-```  
+pkg install git acode
+git clone https://github.com/mikaelkraft/Flutter-Compiler
+acode install Flutter-Compiler
 
-#### **Method 2: Manual Setup**  
-```bash
-# Download plugin
-wget https://github.com/mikaelkraft/Flutter-Compiler/releases/download/v1.0.1/Flutter-Compiler.zip
+```
 
-# In Acode:
-Settings → Plugins → Install from Disk → Select ZIP
-```  
+2. Accept all permissions  
 
 ---
 
 ## 🛠️ First-Run Setup  
-The plugin automatically:  
-1. Installs Flutter SDK + Dart in Termux  
-2. Configures environment paths  
-3. Verifies with `flutter doctor`  
-
-*Requires ~1.5GB storage*  
+The plugin will automatically:  
+1. Install Flutter SDK in Termux (~1.5GB)  
+2. Configure environment paths  
+3. Verify with `flutter doctor`  
 
 ---
 
@@ -61,54 +64,129 @@ Access all commands via:
 Acode Menu → Plugins → Flutter Compiler
 ```  
 
-### **Command Cheatsheet**  
-| Icon | Command               | Terminal Equivalent               |  
-|------|-----------------------|-----------------------------------|  
-| 📦   | Pub Get               | `flutter pub get`                 |  
-| 🔥   | FlutterFire Setup     | `flutterfire configure`           |  
-| 🚀   | Run App               | `flutter run`                     |  
-| 🧹   | Clean Project         | `flutter clean`                   |  
-| 🔍   | Code Analysis         | `dart analyze`                    |  
+### Command Cheatsheet  
+| Command               | Description                      |  
+|-----------------------|----------------------------------|  
+| **Flutter Doctor**    | Verify installation              |  
+| **Pub Get**          | Install dependencies            |  
+| **Build APK**        | Generate release APK            |  
+| **Run App**          | Launch on connected device      |  
+| **FlutterFire**      | Configure Firebase              |  
 
 ---
 
-## 🌩️ Cloud Compilation  
-**Enable in plugin settings to:**  
-- Offload builds to remote servers  
-- Reduce device strain  
 
-*Sample cloud config (Node.js):*  
-```javascript
-// Cloud endpoint example
-app.post('/build', async (req) => {
-  const { cmd, project } = req.body;
-  const result = await exec(`cd ${project} && ${cmd}`);
-  return { logs: result };
-});
+```markdown
+## 🚀 Flutter Development in Acode - Full Workflow
+
+### **1. Create a New Project**
+1. Open Acode's file manager
+2. Create a folder for your project (e.g. `my_app`)
+3. In Termux:
+```bash
+cd /storage/emulated/0/Acode/my_app
+flutter create .
 ```
 
+2. Write Your Code
+
+· Use Acode's editor for:
+  · lib/main.dart (Main app code)
+  · pubspec.yaml (Dependencies)
+
+3. Run Commands via Plugin
+
+Access these through:
+
+```
+Acode Menu → Plugins → Flutter Compiler
+```
+
+
+
+### Command Cheatsheet Refreshed  
+| **When you need to...**    | Use this                      |  
+|-----------------------|----------------------------------|  
+| **install dependencies**    | `Pub Get`              |  
+| **Launch on device**          | `Run App (Connect device via USB debugging first)`            |  
+| **Build APK**        | Build APK`            |  
+| **Add Firebase**          | `FlutterFire Setup`      |  
+| **Check for errors**      | Code Analysis             |  
+
 ---
+
+
+
+4. Debugging Workflow
+
+1. Make code changes in Acode
+2. Run - flutter run - through the plugin
+3. View logs directly in Termux
+
+5. Building for Release
+
+```bash
+# Via plugin menu:
+1. Build AppBundle (for Play Store)
+2. Build APK (for direct install)
+```
+
+6. Advanced Usage
+
+Hot Reload (After running app):
+
+1. Save changes in Acode **(Ctrl+S)**
+2. Press **r** in Termux where **`flutter run`* is active
+
+Testing:
+
+```bash
+# Via plugin:
+Run Tests → Executes `flutter test`
+```
+
+7. Project Management
+
+· Clean Project: Removes build files
+· Repair Packages: Fixes dependency issues
+
+```
+
+### **Plugin UI Flow**:
+```mermaid
+sequenceDiagram
+    User->>Acode: Writes Flutter code
+    User->>Plugin: Selects "Run App"
+    Plugin->>Termux: flutter run
+    Termux->>Device: Installs/Runs app
+    Device->>Termux: Outputs logs
+    Termux->>User: Shows debug output
+```
+
+This workflow leverages the plugin's tight integration with Termux while keeping Acode as the primary code editor. The key advantages are:
+
+1. 📴 No Cloud Required - Everything runs locally on device
+2. ☯️ Full IDE Experience - Acode for editing + Termux for execution
+3. 🕹️ Seamless Commands - One-tap access to all Flutter tools
+
 
 ## ❓ Troubleshooting  
 
-### **Common Issues**  
-| Error                          | Solution                          |  
-|--------------------------------|-----------------------------------|  
-| `Termux not found`            | Install from F-Droid (not Play Store) |  
-| `Flutter doctor errors`       | Run manual install:              |  
+### Common Issues  
+| Error                  | Solution                          |  
+|------------------------|-----------------------------------|  
+| `Termux not found`    | Install from F-Droid (required)   |  
+| `Storage access`      | Run: `termux-setup-storage`       |  
+| `Flutter not found`   | Re-run installer manually:        |  
 ```bash
-./termux_install.sh  # From project's assets folder
-```  
-| `Permission denied`           | Run:                             |  
-```bash
-termux-setup-storage && chmod +x termux_install.sh
+bash /storage/emulated/0/Acode/plugins/Flutter_Compiler/assets/termux_install.sh
 ```  
 
 ---
 
 ## 🛠️ Technical Details  
 
-### **Plugin Structure**  
+### Plugin Structure  
 ```
 flutter_compiler_acode/  
 ├── plugin.json          # Metadata  
@@ -118,23 +196,10 @@ flutter_compiler_acode/
     └── termux_install.sh # Auto-installer  
 ```  
 
-### **termux_install.sh**  
-```bash
-#!/bin/bash
-pkg update -y && pkg install -y git wget openjdk-17 dart
-wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.22.2-stable.tar.xz
-tar xf flutter_linux_3.22.2-stable.tar.xz
-echo 'export PATH="$PATH:$HOME/flutter/bin"' >> ~/.bashrc
-source ~/.bashrc
-flutter doctor --no-upgrade
-```
-
 ---
 
 ## 📜 License  
 MIT © [Mikael Kraft](https://github.com/mikaelkraft)  
 
-> **Pro Tip**: Pair with [Termux:Widget](https://wiki.termux.com/wiki/Termux:Widget) for home-screen command shortcuts!  
-
-[![Get on Acode](https://img.shields.io/badge/Acode-Plugin_Store-green)](https://acode.foxdebug.com/plugins)  
+[![Acode Plugin](https://img.shields.io/badge/Acode-Plugin-green)](https://github.com/mikaelkraft/Flutter-Compiler)
 ```

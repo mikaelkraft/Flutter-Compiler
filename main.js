@@ -1,27 +1,12 @@
-// Flutter Compiler for Acode
+// Flutter Compiler for Acode - Local Only Version
 // By Mikael Kraft (@mikaelkraft)
-// Version 1.0.1
-
-// Improved Environment Configuration
-const ENV_CONFIG = (() => {
-  const token = Deno.env.get("AUTH_TOKEN");
-  if (!token && typeof acode !== 'undefined') {
-    acode.toast("⚠️ AUTH_TOKEN not set - cloud features disabled", 3000);
-  }
-  return {
-    AUTH_TOKEN: token,
-    CLOUD_ENDPOINT: "https://flutter-compiler.mikaelkraft.deno.net/"
-  };
-})();
+// Version 1.0.2
 
 class FlutterCompiler {
-  // Configuration with better defaults handling
+  // Simplified configuration
   static config = {
-    cloudEnabled: Boolean(ENV_CONFIG.AUTH_TOKEN),
-    cloudEndpoint: ENV_CONFIG.CLOUD_ENDPOINT,
-    apiKey: ENV_CONFIG.AUTH_TOKEN,
     termuxPath: "$HOME/flutter/bin",
-    preferLocal: true,
+    preferLocal: true, // Always true now
     debugMode: false
   };
 
@@ -30,7 +15,11 @@ class FlutterCompiler {
     try {
       const savedConfig = await acode.getSecureConfig("flutter_compiler");
       if (savedConfig) {
-        this.config = { ...this.config, ...JSON.parse(savedConfig) };
+        this.config = { 
+          ...this.config, 
+          ...JSON.parse(savedConfig),
+          preferLocal: true // Force local mode
+        };
       }
       
       if (!(await this._checkFlutterExists())) {
@@ -72,25 +61,7 @@ class FlutterCompiler {
   /* [CORE EXECUTION] */
   static async execute(command) {
     this._log(`Executing: ${command}`);
-    
-    if (this.config.preferLocal) {
-      const localResult = await this._executeLocal(command);
-      if (localResult.success) return localResult;
-      this._log(`Local execution failed: ${localResult.message}`);
-    }
-    
-    if (this.config.cloudEnabled) {
-      try {
-        return await this._executeCloud(command);
-      } catch (e) {
-        this._log(`Cloud execution failed: ${e.message}`);
-      }
-    }
-    
-    return {
-      success: false,
-      message: "❌ All execution methods failed"
-    };
+    return await this._executeLocal(command); // Always use local execution
   }
 
   /* [LOCAL EXECUTION] */
@@ -106,64 +77,22 @@ class FlutterCompiler {
       await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${termuxCmd}"`);
       return { 
         success: true, 
-        message: `📱 Local: ${command.split(' ')[0]}` 
+        message: `📱 ${command.split(' ')[0]}` 
       };
+     
+return {
+  success: true,
+  message: `📱 Running in ${projectDir.split('/').pop()}` // Shows folder name
+};
     } catch (e) {
       return { 
         success: false, 
-        message: `❌ Local: ${e.message}` 
+        message: `❌ ${e.message}` 
       };
     }
   }
 
-  /* [CLOUD EXECUTION] - Improved with timeout */
-  static async _executeCloud(command, timeout = 10000) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
-    try {
-      const projectDir = await editor.getProjectDir();
-      const payload = {
-        cmd: command,
-        project: await this._getProjectId(projectDir),
-        timestamp: Date.now()
-      };
-
-      this._log(`Cloud request: ${command}`);
-      
-      const response = await fetch(this.config.cloudEndpoint, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${this.config.apiKey}`
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (e) {
-      clearTimeout(timeoutId);
-      throw e;
-    }
-  }
-
-  static async _getProjectId(projectDir) {
-    try {
-      const gitHash = await acode.exec(`cd ${projectDir} && git rev-parse HEAD 2>/dev/null`);
-      return `git:${await acode.hash(gitHash)}`;
-    } catch {
-      return `local:${await acode.hash(Math.random().toString())}`;
-    }
-  }
-
-  /* [LOGGING] - Enhanced */
+  /* [LOGGING] */
   static _log(message, isError = false) {
     if (!this.config.debugMode) return;
     const timestamp = new Date().toLocaleTimeString();
@@ -193,24 +122,84 @@ class FlutterCompiler {
   static firebaseDeploy = () => this.execute("flutter pub run flutterfire_cli:flutterfire deploy");
 }
 
-/* [PLUGIN UI] */
+/* [PLUGIN UI SETUP] */
 acode.on("initialize", FlutterCompiler.init);
+
+// Installation Welcome Message
+acode.on("install", async () => {
+  const choice = await acode.confirm(
+    "🎉 Flutter Compiler Installed!",
+    `Transform your Android device into a Flutter development environment!
+    
+Need help? Check the documentation or support the project.`,
+    [
+      { text: "Get Started", id: "ok" },
+      { text: "View Docs", id: "docs" },
+      { text: "Donate", id: "donate" }
+    ]
+  );
+
+  if (choice === "docs") {
+    acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki");
+  } else if (choice === "donate") {
+    acode.launchUrl("https://github.com/sponsors/mikaelkraft");
+  }
+});
+
+// Unified Help & Support Menu
+acode.setPluginMenu("❓ Help & Support", () => {
+  acode.showPicker(
+    "Flutter Compiler - Support",
+    [
+      "📚 Documentation",
+      "💖 Sponsor Development", 
+      "🐛 Report Issues",
+      "💬 Join Community"
+    ],
+    (selected) => {
+      const actions = {
+        0: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki"),
+        1: () => {
+          acode.showPicker(
+            "Support Options",
+            [
+              "GitHub Sponsors (Monthly)",
+              "Buy Me a Coffee (One-time)", 
+              "Copy Crypto Address (USDT on ERC20)"
+            ],
+            (donationChoice) => {
+              const urls = {
+                0: "https://github.com/sponsors/mikaelkraft",
+                1: "https://buymeacoffee.com/mikaelkraft",
+                2: "0x57ccCC13ba0aBF9Dc7f884E94875e73856160822"
+              };
+              if (donationChoice === 2) {
+                acode.setClipboard(urls[2]);
+                acode.toast("USDT(ERC20) Wallet address copied!");
+              } else {
+                acode.launchUrl(urls[donationChoice]);
+              }
+            }
+          );
+        },
+        2: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/issues"),
+        3: () => acode.launchUrl("https://discord.gg/your-invite-link")
+      };
+      actions[selected]();
+    }
+  );
+});
 
 // Settings Menu
 acode.setPluginMenu("⚙️ Settings", () => {
   acode.showInputDialog("Compiler Settings", [
-    { label: "Cloud Endpoint", type: "text", value: FlutterCompiler.config.cloudEndpoint },
-    { label: "Enable Cloud", type: "checkbox", checked: FlutterCompiler.config.cloudEnabled },
-    { label: "Prefer Local", type: "checkbox", checked: FlutterCompiler.config.preferLocal },
-    { label: "Debug Mode", type: "checkbox", checked: FlutterCompiler.config.debugMode }
+    {
+      label: "Debug Mode",
+      type: "checkbox",
+      checked: FlutterCompiler.config.debugMode
+    }
   ], async (values) => {
-    FlutterCompiler.config = { 
-      ...FlutterCompiler.config,
-      cloudEndpoint: values[0],
-      cloudEnabled: values[1],
-      preferLocal: values[2],
-      debugMode: values[3]
-    };
+    FlutterCompiler.config.debugMode = values[0];
     await acode.setSecureConfig("flutter_compiler", JSON.stringify(FlutterCompiler.config));
     acode.toast("✅ Settings saved");
   });
