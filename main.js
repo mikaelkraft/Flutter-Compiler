@@ -170,7 +170,7 @@ acode.setPluginMenu("❓ Help & Support", () => {
             (donationChoice) => {
               const urls = {
                 0: "https://github.com/sponsors/mikaelkraft",
-                1: "https://buymeacoffee.com/mikaelkraft",
+                1: "https://ko-fi.com/mikaelkraft",
                 2: "0x57ccCC13ba0aBF9Dc7f884E94875e73856160822"
               };
               if (donationChoice === 2) {
@@ -183,7 +183,7 @@ acode.setPluginMenu("❓ Help & Support", () => {
           );
         },
         2: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/issues"),
-        3: () => acode.launchUrl("https://discord.gg/your-invite-link")
+        3: () => acode.launchUrl("https://discord.gg/3pnGUqKg")
       };
       actions[selected]();
     }
