@@ -155,7 +155,9 @@ class FlutterCompiler {
 }
 
 /* [PLUGIN UI SETUP] */
-acode.on("initialize", FlutterCompiler.init);
+acode.on("initialize", () => {
+  FlutterCompiler.init();
+});
 
 // Installation Welcome Message
 acode.on("install", async () => {
@@ -217,7 +219,9 @@ acode.setPluginMenu("❓ Help & Support", () => {
         2: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/issues"),
         3: () => acode.launchUrl("https://discord.gg/3pnGUqKg")
       };
-      actions[selected]();
+      if (actions[selected]) {
+        actions[selected]();
+      }
     }
   );
 });
@@ -237,7 +241,7 @@ acode.setPluginMenu("⚙️ Settings", () => {
   });
 });
 
-// Command Menu - FIXED: Proper array iteration
+// Command Menu - FIXED: Proper array definition and iteration
 const commandMenuItems = [
   { icon: "🆕", name: "Create Project", cmd: "createProject" },
   { icon: "🩺", name: "Flutter Doctor", cmd: "doctor" },
@@ -254,17 +258,18 @@ const commandMenuItems = [
   { icon: "🧪", name: "Run Tests", cmd: "test" }
 ];
 
-// Proper iteration using for...of loop
-for (const item of commandMenuItems) {
+// Proper iteration using for loop
+for (let i = 0; i < commandMenuItems.length; i++) {
+  const item = commandMenuItems[i];
   acode.setPluginMenu(`${item.icon} ${item.name}`, () => {
     FlutterCompiler[item.cmd]().then(res => {
       acode.toast(res.message);
       if (res.error) {
-        this._log(`Error: ${res.error}`, true);
+        FlutterCompiler._log(`Error: ${res.error}`, true);
       }
     }).catch(error => {
       acode.toast(`❌ Failed: ${error.message}`);
-      this._log(`Execution error: ${error}`, true);
+      FlutterCompiler._log(`Execution error: ${error}`, true);
     });
   });
 }
