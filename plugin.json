@@ -1,7 +1,10 @@
+
+**plugin.json**
+```json
 {
   "name": "Flutter Compiler",
   "repository": "https://github.com/mikaelkraft/Flutter-Compiler",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": "Mikael Kraft (@mikaelkraft)",
   "description": {
     "short": "Full Flutter development on Android",
@@ -13,13 +16,19 @@
       "- Full Flutter/Dart command support",
       "- Firebase tools integration",
       "- Termux-powered local execution",
+      "- Real-time debugging and testing",
+      "",
+      "Prerequisites:",
+      "• Termux (F-Droid)",
+      "• Termux:API (F-Droid) - Required for command execution",
+      "• Acode X Terminal Plugin (Recommended)",
       "",
       "Support Development:",
       "• [GitHub Sponsors](https://github.com/sponsors/mikaelkraft)",
-      "• [Buy Me a Coffee](https://buymeacoffee.com/mikaelkraft)",
+      "• [Buy Me a Coffee](https://ko-fi.com/mikaelkraft)",
       "• [Report Issues](https://github.com/mikaelkraft/Flutter-Compiler/issues)",
       "",
-      "Need Help? Join our [Discord Community](https://discord.gg/your-invite-link)"
+      "Need Help? Join our [Discord Community](https://discord.gg/3pnGUqKg)"
     ]
   },
   "links": {
@@ -31,15 +40,21 @@
   "github": "mikaelkraft",
   "main": "main.js",
   "icon": "assets/flutter_icon.png",
-  "description": "Turn your Android device into a Flutter development powerhouse - Build, run, and deploy Flutter apps directly from Termux",
+  "description": "Turn your Android device into a Flutter development powerhouse - Build, run, and deploy Flutter apps directly from your device",
   "permissions": ["exec", "file", "storage"],
   "assets": ["assets/flutter_icon.png", "assets/termux_install.sh"],
   "acodeVersion": "1.11.1",
   "dependencies": {
     "termux-api": ">=0.50"
   },
-  "tags": ["flutter", "dart", "mobile-development", "android", "termux"],
+  "prerequisites": [
+    "Termux (F-Droid)",
+    "Termux:API (F-Droid)",
+    "Acode X Terminal Plugin (Recommended)"
+  ],
+  "tags": ["flutter", "dart", "mobile-development", "android", "termux", "compiler"],
   "changelog": {
+    "1.0.3": "Added Termux:API requirement, enhanced error handling, and project validation",
     "1.0.2": "Optimized for local-only execution with enhanced Termux integration",
     "1.0.1": "Initial release"
   }

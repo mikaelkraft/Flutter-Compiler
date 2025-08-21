@@ -1,6 +1,6 @@
 // Flutter Compiler for Acode - Local Only Version
 // By Mikael Kraft (@mikaelkraft)
-// Version 1.0.2
+// Version 1.0.3
 
 class FlutterCompiler {
   // Simplified configuration
@@ -50,7 +50,7 @@ class FlutterCompiler {
     
     try {
       acode.toast("⚙️ Setting up Flutter...");
-      await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${INSTALL_CMD}"`);
+      await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${encodeURIComponent(INSTALL_CMD)}"`);
       this._log("Flutter installation completed");
     } catch (e) {
       this._log(`Installation failed: ${e.message}`, true);
@@ -68,26 +68,50 @@ class FlutterCompiler {
   static async _executeLocal(command) {
     try {
       const projectDir = await editor.getProjectDir();
+      
+      // Check if project directory exists
+      if (!projectDir) {
+        return { 
+          success: false, 
+          message: "❌ No project directory found. Please open a project first." 
+        };
+      }
+      
+      // Check if it's a Flutter project
+      const hasPubspec = await acode.exec(`[ -f "${projectDir}/pubspec.yaml" ] && echo "1"`);
+      if (!hasPubspec && !command.includes("create")) {
+        return {
+          success: false,
+          message: "❌ Not a Flutter project. Run 'flutter create .' first."
+        };
+      }
+      
       const termuxCmd = `
         cd ${projectDir} &&
         export PATH="$PATH:${this.config.termuxPath}" &&
         ${command}
       `;
       
-      await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${termuxCmd}"`);
+      // Try Termux:API first for better integration
+      let result;
+      try {
+        result = await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${encodeURIComponent(termuxCmd)}"`);
+      } catch (apiError) {
+        // Fallback to basic Termux execution
+        this._log("Termux:API not available, using fallback", true);
+        result = await acode.exec(`termux-exec ${termuxCmd}`);
+      }
+      
       return { 
         success: true, 
-        message: `📱 ${command.split(' ')[0]}` 
+        message: `📱 Running in ${projectDir.split('/').pop()}`,
+        output: result
       };
-     
-return {
-  success: true,
-  message: `📱 Running in ${projectDir.split('/').pop()}` // Shows folder name
-};
     } catch (e) {
       return { 
         success: false, 
-        message: `❌ ${e.message}` 
+        message: `❌ ${e.message}`,
+        error: e.toString()
       };
     }
   }
@@ -113,6 +137,14 @@ return {
   static test = () => this.execute("flutter test");
   static clean = () => this.execute("flutter clean");
   static repair = () => this.execute("flutter pub upgrade --major-versions");
+  
+  static async createProject() {
+    const projectDir = await editor.getProjectDir();
+    if (!projectDir) {
+      return { success: false, message: "❌ Please open a project directory first" };
+    }
+    return this.execute("flutter create .");
+  }
   
   static async flutterfire() { 
     const res = await this.execute("dart pub global activate flutterfire_cli");
@@ -205,8 +237,9 @@ acode.setPluginMenu("⚙️ Settings", () => {
   });
 });
 
-// Command Menu
-[
+// Command Menu - FIXED: Proper array iteration
+const commandMenuItems = [
+  { icon: "🆕", name: "Create Project", cmd: "createProject" },
   { icon: "🩺", name: "Flutter Doctor", cmd: "doctor" },
   { icon: "📦", name: "Pub Get", cmd: "pubGet" },
   { icon: "🚀", name: "Run App", cmd: "runApp" },
@@ -219,7 +252,30 @@ acode.setPluginMenu("⚙️ Settings", () => {
   { icon: "🔍", name: "Code Analysis", cmd: "analyze" },
   { icon: "✨", name: "Format Code", cmd: "format" },
   { icon: "🧪", name: "Run Tests", cmd: "test" }
-].forEach(({icon, name, cmd}) => {
-  acode.setPluginMenu(`${icon} ${name}`, () => 
-    FlutterCompiler[cmd]().then(res => acode.toast(res.message))
+];
+
+// Proper iteration using for...of loop
+for (const item of commandMenuItems) {
+  acode.setPluginMenu(`${item.icon} ${item.name}`, () => {
+    FlutterCompiler[item.cmd]().then(res => {
+      acode.toast(res.message);
+      if (res.error) {
+        this._log(`Error: ${res.error}`, true);
+      }
+    }).catch(error => {
+      acode.toast(`❌ Failed: ${error.message}`);
+      this._log(`Execution error: ${error}`, true);
+    });
+  });
+}
+
+// Add project validation on startup
+acode.on("editorOpen", async () => {
+  const projectDir = await editor.getProjectDir();
+  if (projectDir) {
+    const hasPubspec = await acode.exec(`[ -f "${projectDir}/pubspec.yaml" ] && echo "1"`);
+    if (!hasPubspec) {
+      acode.toast("⚠️ Not a Flutter project. Use 'Create Project' first.", 4000);
+    }
+  }
 });
