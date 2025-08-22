@@ -5,28 +5,7 @@
   "author": "Mikael Kraft (@mikaelkraft)",
   "description": {
     "short": "Full Flutter development on Android",
-    "full": [
-      "Transform your Android device into a complete Flutter development environment.",
-      "",
-      "Features:",
-      "- One-tap Flutter SDK installation",
-      "- Full Flutter/Dart command support",
-      "- Firebase tools integration",
-      "- Termux-powered local execution",
-      "- Real-time debugging and testing",
-      "",
-      "Prerequisites:",
-      "• Termux (F-Droid)",
-      "• Termux:API (F-Droid) - Required for command execution",
-      "• Acode X Terminal Plugin (Recommended)",
-      "",
-      "Support Development:",
-      "• [GitHub Sponsors](https://github.com/sponsors/mikaelkraft)",
-      "• [Buy Me a Coffee](https://ko-fi.com/mikaelkraft)",
-      "• [Report Issues](https://github.com/mikaelkraft/Flutter-Compiler/issues)",
-      "",
-      "Need Help? Join our [Discord Community](https://discord.gg/3pnGUqKg)"
-    ]
+    "full": "Transform your Android device into a complete Flutter development environment.\n\nFeatures:\n- One-tap Flutter SDK installation\n- Full Flutter/Dart command support\n- Firebase tools integration\n- Termux-powered local execution\n- Real-time debugging and testing\n\nPrerequisites:\n• Termux (F-Droid)\n• Termux:API (F-Droid) - Required for command execution\n• Acode X Terminal Plugin (Recommended)\n\nSupport Development:\n• [GitHub Sponsors](https://github.com/sponsors/mikaelkraft)\n• [Buy Me a Coffee](https://ko-fi.com/mikaelkraft)\n• [Report Issues](https://github.com/mikaelkraft/Flutter-Compiler/issues)\n\nNeed Help? Join our [Discord Community](https://discord.gg/3pnGUqKg)"
   },
   "links": {
     "support": "https://github.com/mikaelkraft/Flutter-Compiler/discussions",
@@ -37,10 +16,18 @@
   "github": "mikaelkraft",
   "main": "main.js",
   "icon": "assets/flutter_icon.png",
-  "description": "Turn your Android device into a Flutter development powerhouse - Build, run, and deploy Flutter apps directly from your device",
-  "permissions": ["exec", "file", "storage"],
-  "assets": ["assets/flutter_icon.png", "assets/termux_install.sh"],
-  "acodeVersion": "1.11.1",
+  "permissions": [
+    "exec",
+    "file",
+    "storage",
+    "clipboard",
+    "internet"
+  ],
+  "assets": [
+    "assets/flutter_icon.png",
+    "assets/termux_install.sh"
+  ],
+  "acodeVersion": "1.9.0",
   "dependencies": {
     "termux-api": ">=0.50"
   },
@@ -49,7 +36,14 @@
     "Termux:API (F-Droid)",
     "Acode X Terminal Plugin (Recommended)"
   ],
-  "tags": ["flutter", "dart", "mobile-development", "android", "termux", "compiler"],
+  "tags": [
+    "flutter",
+    "dart",
+    "mobile-development",
+    "android",
+    "termux",
+    "compiler"
+  ],
   "changelog": {
     "1.0.3": "Added Termux:API requirement, enhanced error handling, and project validation",
     "1.0.2": "Optimized for local-only execution with enhanced Termux integration",

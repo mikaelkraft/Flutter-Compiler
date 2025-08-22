@@ -1,6 +1,6 @@
 // Flutter Compiler for Acode - Local Only Version
 // By Mikael Kraft (@mikaelkraft)
-// Version 1.0.3
+// Version 1.0.3 (patched for safer UI argument handling)
 
 class FlutterCompiler {
   // Simplified configuration
@@ -15,24 +15,32 @@ class FlutterCompiler {
     try {
       const savedConfig = await acode.getSecureConfig("flutter_compiler");
       if (savedConfig) {
-        this.config = { 
-          ...this.config, 
-          ...JSON.parse(savedConfig),
-          preferLocal: true // Force local mode
-        };
+        try {
+          const parsed = JSON.parse(savedConfig);
+          this.config = { 
+            ...this.config, 
+            ...parsed,
+            preferLocal: true // Force local mode
+          };
+        } catch (e) {
+          // if saved config corrupt, ignore it
+          this._log(`Saved config parse failed: ${e.message}`, true);
+        }
       }
       
       if (!(await this._checkFlutterExists())) {
         await this._installFlutter();
       }
     } catch (e) {
-      this._log(`Initialization failed: ${e.message}`, true);
+      this._log(`Initialization failed: ${e && e.message ? e.message : e}`, true);
     }
   }
 
   static async _checkFlutterExists() {
     try {
-      return await acode.exec(`[ -d "${this.config.termuxPath}" ] && echo "1"`);
+      const res = await acode.exec(`[ -d "${this.config.termuxPath}" ] && echo "1"`);
+      // normalize result: some acode.exec return string, some boolean, etc.
+      return !!res && String(res).trim() === "1";
     } catch {
       return false;
     }
@@ -53,7 +61,7 @@ class FlutterCompiler {
       await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${encodeURIComponent(INSTALL_CMD)}"`);
       this._log("Flutter installation completed");
     } catch (e) {
-      this._log(`Installation failed: ${e.message}`, true);
+      this._log(`Installation failed: ${e && e.message ? e.message : e}`, true);
       throw e;
     }
   }
@@ -110,8 +118,8 @@ class FlutterCompiler {
     } catch (e) {
       return { 
         success: false, 
-        message: `❌ ${e.message}`,
-        error: e.toString()
+        message: `❌ ${e && e.message ? e.message : e}`,
+        error: e ? e.toString() : String(e)
       };
     }
   }
@@ -121,8 +129,8 @@ class FlutterCompiler {
     if (!this.config.debugMode) return;
     const timestamp = new Date().toLocaleTimeString();
     console.log(`[Flutter][${timestamp}] ${message}`);
-    if (isError) {
-      acode.toast(`Flutter: ${message.substring(0, 50)}`, 3000);
+    if (isError && typeof acode !== "undefined" && acode.toast) {
+      acode.toast(`Flutter: ${String(message).substring(0, 50)}`, 3000);
     }
   }
 
@@ -161,66 +169,99 @@ acode.on("initialize", () => {
 
 // Installation Welcome Message
 acode.on("install", async () => {
-  const choice = await acode.confirm(
-    "🎉 Flutter Compiler Installed!",
-    `Transform your Android device into a Flutter development environment!
-    
+  try {
+    // Some Acode versions expect an array of labels and return an index.
+    // Use a simple array of strings for maximum compatibility.
+    const buttons = ["Get Started", "View Docs", "Donate"];
+    const choiceIndex = await acode.confirm(
+      "🎉 Flutter Compiler Installed!",
+      `Transform your Android device into a Flutter development environment!
+      
 Need help? Check the documentation or support the project.`,
-    [
-      { text: "Get Started", id: "ok" },
-      { text: "View Docs", id: "docs" },
-      { text: "Donate", id: "donate" }
-    ]
-  );
+      buttons
+    );
 
-  if (choice === "docs") {
-    acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki");
-  } else if (choice === "donate") {
-    acode.launchUrl("https://github.com/sponsors/mikaelkraft");
+    // Normalize returned value: could be index (number) or string label
+    let choice = null;
+    if (typeof choiceIndex === "number") {
+      choice = buttons[choiceIndex];
+    } else if (typeof choiceIndex === "string") {
+      // If older/newer versions return id or label, match against known labels
+      choice = choiceIndex;
+    }
+
+    if (choice === "View Docs") {
+      acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki");
+    } else if (choice === "Donate") {
+      acode.launchUrl("https://github.com/sponsors/mikaelkraft");
+    } else {
+      // default "Get Started" -> do nothing, just dismiss
+    }
+  } catch (e) {
+    // If acode.confirm shape differs or throws, fail gracefully
+    FlutterCompiler._log(`Install dialog failed: ${e && e.message ? e.message : e}`, true);
   }
 });
 
 // Unified Help & Support Menu
 acode.setPluginMenu("❓ Help & Support", () => {
+  // Ensure options passed are arrays of strings
+  const supportOptions = [
+    "📚 Documentation",
+    "💖 Sponsor Development", 
+    "🐛 Report Issues",
+    "💬 Join Community"
+  ];
+
   acode.showPicker(
     "Flutter Compiler - Support",
-    [
-      "📚 Documentation",
-      "💖 Sponsor Development", 
-      "🐛 Report Issues",
-      "💬 Join Community"
-    ],
+    supportOptions,
     (selected) => {
-      const actions = {
-        0: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki"),
-        1: () => {
-          acode.showPicker(
-            "Support Options",
-            [
+      try {
+        // selected might be index (number) or label (string). Normalize.
+        let selIndex = -1;
+        if (typeof selected === "number") {
+          selIndex = selected;
+        } else if (typeof selected === "string") {
+          selIndex = supportOptions.indexOf(selected);
+        }
+
+        const actions = {
+          0: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki"),
+          1: () => {
+            const donationOptions = [
               "GitHub Sponsors (Monthly)",
               "Buy Me a Coffee (One-time)", 
               "Copy Crypto Address (USDT on ERC20)"
-            ],
-            (donationChoice) => {
+            ];
+            acode.showPicker("Support Options", donationOptions, (donationChoice) => {
+              let dIndex = -1;
+              if (typeof donationChoice === "number") {
+                dIndex = donationChoice;
+              } else if (typeof donationChoice === "string") {
+                dIndex = donationOptions.indexOf(donationChoice);
+              }
               const urls = {
                 0: "https://github.com/sponsors/mikaelkraft",
                 1: "https://ko-fi.com/mikaelkraft",
                 2: "0x57ccCC13ba0aBF9Dc7f884E94875e73856160822"
               };
-              if (donationChoice === 2) {
+              if (dIndex === 2) {
                 acode.setClipboard(urls[2]);
                 acode.toast("USDT(ERC20) Wallet address copied!");
-              } else {
-                acode.launchUrl(urls[donationChoice]);
+              } else if (dIndex === 0 || dIndex === 1) {
+                acode.launchUrl(urls[dIndex]);
               }
-            }
-          );
-        },
-        2: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/issues"),
-        3: () => acode.launchUrl("https://discord.gg/3pnGUqKg")
-      };
-      if (actions[selected]) {
-        actions[selected]();
+            });
+          },
+          2: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/issues"),
+          3: () => acode.launchUrl("https://discord.gg/3pnGUqKg")
+        };
+        if (actions[selIndex]) {
+          actions[selIndex]();
+        }
+      } catch (err) {
+        FlutterCompiler._log(`Support picker handler error: ${err && err.message ? err.message : err}`, true);
       }
     }
   );
@@ -228,16 +269,32 @@ acode.setPluginMenu("❓ Help & Support", () => {
 
 // Settings Menu
 acode.setPluginMenu("⚙️ Settings", () => {
-  acode.showInputDialog("Compiler Settings", [
+  const inputFields = [
     {
       label: "Debug Mode",
       type: "checkbox",
-      checked: FlutterCompiler.config.debugMode
+      checked: !!FlutterCompiler.config.debugMode
     }
-  ], async (values) => {
-    FlutterCompiler.config.debugMode = values[0];
-    await acode.setSecureConfig("flutter_compiler", JSON.stringify(FlutterCompiler.config));
-    acode.toast("✅ Settings saved");
+  ];
+
+  acode.showInputDialog("Compiler Settings", inputFields, async (values) => {
+    try {
+      // values may be an array or object depending on Acode version
+      let debugVal = false;
+      if (Array.isArray(values)) {
+        debugVal = !!values[0];
+      } else if (values && typeof values === "object" && "0" in values) {
+        debugVal = !!values[0];
+      } else if (typeof values === "boolean") {
+        debugVal = values;
+      }
+      FlutterCompiler.config.debugMode = debugVal;
+      await acode.setSecureConfig("flutter_compiler", JSON.stringify(FlutterCompiler.config));
+      acode.toast("✅ Settings saved");
+    } catch (e) {
+      FlutterCompiler._log(`Settings save failed: ${e && e.message ? e.message : e}`, true);
+      acode.toast("❌ Failed to save settings");
+    }
   });
 });
 
@@ -263,12 +320,16 @@ for (let i = 0; i < commandMenuItems.length; i++) {
   const item = commandMenuItems[i];
   acode.setPluginMenu(`${item.icon} ${item.name}`, () => {
     FlutterCompiler[item.cmd]().then(res => {
-      acode.toast(res.message);
-      if (res.error) {
+      if (res && res.message) {
+        acode.toast(res.message);
+      } else {
+        acode.toast("✅ Command finished");
+      }
+      if (res && res.error) {
         FlutterCompiler._log(`Error: ${res.error}`, true);
       }
     }).catch(error => {
-      acode.toast(`❌ Failed: ${error.message}`);
+      acode.toast(`❌ Failed: ${error && error.message ? error.message : error}`);
       FlutterCompiler._log(`Execution error: ${error}`, true);
     });
   });
@@ -276,11 +337,15 @@ for (let i = 0; i < commandMenuItems.length; i++) {
 
 // Add project validation on startup
 acode.on("editorOpen", async () => {
-  const projectDir = await editor.getProjectDir();
-  if (projectDir) {
-    const hasPubspec = await acode.exec(`[ -f "${projectDir}/pubspec.yaml" ] && echo "1"`);
-    if (!hasPubspec) {
-      acode.toast("⚠️ Not a Flutter project. Use 'Create Project' first.", 4000);
+  try {
+    const projectDir = await editor.getProjectDir();
+    if (projectDir) {
+      const hasPubspec = await acode.exec(`[ -f "${projectDir}/pubspec.yaml" ] && echo "1"`);
+      if (!hasPubspec) {
+        acode.toast("⚠️ Not a Flutter project. Use 'Create Project' first.", 4000);
+      }
     }
+  } catch (e) {
+    FlutterCompiler._log(`editorOpen handler error: ${e && e.message ? e.message : e}`, true);
   }
 });
