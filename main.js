@@ -1,6 +1,6 @@
 // Flutter Compiler for Acode - Local Only Version
 // By Mikael Kraft (@mikaelkraft)
-// Version 1.0.8 (patched for $page-based UI, removed setPluginMenu and acode.on)
+// Version 1.0.9 (patched for command palette integration, removed UI/menu rendering)
 
 acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheFileUrl, cacheFile }) => {
   class FlutterCompiler {
@@ -28,12 +28,12 @@ acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheF
           this.config.isFirstRun = false;
           await acode.setSecureConfig("flutter_compiler", JSON.stringify(this.config));
         }
-        this._setupUI($page);
-        this._log("Initialization completed with minimal setup");
-        acode.toast("✅ Flutter Compiler initialized. Check the plugin page.", 3000);
+        this._setupCommands();
+        this._log("Initialization completed");
+        acode.toast("✅ Flutter Compiler ready. Use Ctrl+P to search commands (e.g., 'Flutter Doctor').", 5000);
       } catch (e) {
         this._log(`Initialization failed: ${e && e.message ? e.message : e}`, true);
-        acode.toast("❌ Plugin initialization failed. Check logs or prerequisites.", 5000);
+        acode.toast("❌ Plugin initialization failed. Check prerequisites.", 5000);
       }
     }
 
@@ -63,133 +63,114 @@ Need help? Check the documentation or support the project.`,
       }
     }
 
-    static _setupUI($page) {
-      try {
-        $page.empty(); // Clear existing content
-        const $container = $('<div>').addClass('flutter-compiler-menu');
-        $container.append('<h2>Flutter Compiler Commands</h2>');
+    static _setupCommands() {
+      const commands = [
+        { name: "Flutter Create Project", description: "Initialize new Flutter project", exec: () => this.createProject() },
+        { name: "Flutter Doctor", description: "Verify installation", exec: () => this.doctor() },
+        { name: "Flutter Pub Get", description: "Install dependencies", exec: () => this.pubGet() },
+        { name: "Flutter Run App", description: "Launch on connected device", exec: () => this.runApp() },
+        { name: "Flutter Build APK", description: "Generate release APK", exec: () => this.buildApk() },
+        { name: "Flutter Build AppBundle", description: "Generate Play Store bundle", exec: () => this.buildAppBundle() },
+        { name: "Flutter FlutterFire Setup", description: "Configure Firebase", exec: () => this.flutterfire() },
+        { name: "Flutter Firebase Deploy", description: "Deploy to Firebase", exec: () => this.firebaseDeploy() },
+        { name: "Flutter Clean Project", description: "Remove build files", exec: () => this.clean() },
+        { name: "Flutter Repair Packages", description: "Fix dependency issues", exec: () => this.repair() },
+        { name: "Flutter Code Analysis", description: "Check for errors", exec: () => this.analyze() },
+        { name: "Flutter Format Code", description: "Format Dart code", exec: () => this.format() },
+        { name: "Flutter Run Tests", description: "Execute test suite", exec: () => this.test() }
+      ];
 
-        const commands = [
-          { icon: "🆕", name: "Create Project", cmd: "createProject" },
-          { icon: "🩺", name: "Flutter Doctor", cmd: "doctor" },
-          { icon: "📦", name: "Pub Get", cmd: "pubGet" },
-          { icon: "🚀", name: "Run App", cmd: "runApp" },
-          { icon: "🔧", name: "Build APK", cmd: "buildApk" },
-          { icon: "📦", name: "Build AppBundle", cmd: "buildAppBundle" },
-          { icon: "🔥", name: "FlutterFire Setup", cmd: "flutterfire" },
-          { icon: "☁️", name: "Firebase Deploy", cmd: "firebaseDeploy" },
-          { icon: "🧹", name: "Clean Project", cmd: "clean" },
-          { icon: "🔄", name: "Repair Packages", cmd: "repair" },
-          { icon: "🔍", name: "Code Analysis", cmd: "analyze" },
-          { icon: "✨", name: "Format Code", cmd: "format" },
-          { icon: "🧪", name: "Run Tests", cmd: "test" }
-        ];
-
-        commands.forEach(item => {
-          const $button = $('<button>')
-            .text(`${item.icon} ${item.name}`)
-            .on('click', () => this[item.cmd]().then(res => {
+      commands.forEach(cmd => {
+        acode.addCommand({
+          name: cmd.name,
+          description: cmd.description,
+          bindKey: { win: null, mac: null },
+          exec: async () => {
+            try {
+              const res = await cmd.exec();
               if (res && res.message) acode.toast(res.message);
               else acode.toast("✅ Command finished");
               if (res && res.error) this._log(`Error: ${res.error}`, true);
-            }).catch(error => {
+            } catch (error) {
               acode.toast(`❌ Failed: ${error && error.message ? error.message : error}`);
               this._log(`Execution error: ${error}`, true);
-            }));
-          $container.append($button);
-        });
-
-        const $settingsButton = $('<button>')
-          .text("⚙️ Settings")
-          .on('click', () => this._showSettings());
-        $container.append($settingsButton);
-
-        const $supportButton = $('<button>')
-          .text("❓ Help & Support")
-          .on('click', () => this._showSupport());
-        $container.append($supportButton);
-
-        $page.append($container);
-      } catch (e) {
-        this._log(`UI setup failed: ${e && e.message ? e.message : e}`, true);
-      }
-    }
-
-    static async _showSettings() {
-      try {
-        const inputFields = [
-          {
-            label: "Debug Mode",
-            type: "checkbox",
-            checked: !!this.config.debugMode
+            }
           }
-        ];
-        await acode.showInputDialog("Compiler Settings", inputFields, (values) => {
+        });
+      });
+
+      acode.addCommand({
+        name: "Flutter Settings",
+        description: "Configure plugin settings",
+        bindKey: { win: null, mac: null },
+        exec: async () => {
           try {
+            const inputFields = [
+              {
+                label: "Debug Mode",
+                type: "checkbox",
+                checked: !!this.config.debugMode
+              }
+            ];
+            const values = await acode.prompt("Compiler Settings", inputFields, "checkbox");
             let debugVal = false;
             if (Array.isArray(values)) debugVal = !!values[0];
             else if (values && typeof values === "object" && "0" in values) debugVal = !!values[0];
             else if (typeof values === "boolean") debugVal = values;
             this.config.debugMode = debugVal;
-            acode.setSecureConfig("flutter_compiler", JSON.stringify(this.config));
+            await acode.setSecureConfig("flutter_compiler", JSON.stringify(this.config));
             acode.toast("✅ Settings saved");
           } catch (e) {
             this._log(`Settings save failed: ${e && e.message ? e.message : e}`, true);
             acode.toast("❌ Failed to save settings");
           }
-        });
-      } catch (e) {
-        this._log(`Settings dialog failed: ${e && e.message ? e.message : e}`, true);
-      }
-    }
+        }
+      });
 
-    static async _showSupport() {
-      try {
-        const supportOptions = [
-          "📚 Documentation",
-          "💖 Sponsor Development",
-          "🐛 Report Issues",
-          "💬 Join Community"
-        ];
-        acode.showPicker(
-          "Flutter Compiler - Support",
-          supportOptions,
-          (selected) => {
-            try {
-              let selIndex = -1;
-              if (typeof selected === "number") selIndex = selected;
-              else if (typeof selected === "string") selIndex = supportOptions.indexOf(selected);
-              const actions = {
-                0: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki"),
-                1: () => {
-                  const donationOptions = ["GitHub Sponsors (Monthly)", "Buy Me a Coffee (One-time)", "Copy Crypto Address (USDT on ERC20)"];
-                  acode.showPicker("Support Options", donationOptions, (donationChoice) => {
-                    let dIndex = -1;
-                    if (typeof donationChoice === "number") dIndex = donationChoice;
-                    else if (typeof donationChoice === "string") dIndex = donationOptions.indexOf(donationChoice);
-                    const urls = {
-                      0: "https://github.com/sponsors/mikaelkraft",
-                      1: "https://ko-fi.com/mikaelkraft",
-                      2: "0x57ccCC13ba0aBF9Dc7f884E94875e73856160822"
-                    };
-                    if (dIndex === 2) {
-                      acode.setClipboard(urls[2]);
-                      acode.toast("USDT(ERC20) Wallet address copied!");
-                    } else if (dIndex === 0 || dIndex === 1) acode.launchUrl(urls[dIndex]);
-                  });
-                },
-                2: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/issues"),
-                3: () => acode.launchUrl("https://discord.gg/3pnGUqKg")
-              };
-              if (actions[selIndex]) actions[selIndex]();
-            } catch (err) {
-              this._log(`Support picker handler error: ${err && err.message ? err.message : err}`, true);
-            }
+      acode.addCommand({
+        name: "Flutter Help & Support",
+        description: "Access documentation and support",
+        bindKey: { win: null, mac: null },
+        exec: async () => {
+          try {
+            const supportOptions = [
+              "📚 Documentation",
+              "💖 Sponsor Development", 
+              "🐛 Report Issues",
+              "💬 Join Community"
+            ];
+            const selected = await acode.prompt("Flutter Compiler - Support", supportOptions, "select");
+            let selIndex = -1;
+            if (typeof selected === "number") selIndex = selected;
+            else if (typeof selected === "string") selIndex = supportOptions.indexOf(selected);
+            const actions = {
+              0: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki"),
+              1: () => {
+                const donationOptions = ["GitHub Sponsors (Monthly)", "Buy Me a Coffee (One-time)", "Copy Crypto Address (USDT on ERC20)"];
+                acode.prompt("Support Options", donationOptions, "select").then(donationChoice => {
+                  let dIndex = -1;
+                  if (typeof donationChoice === "number") dIndex = donationChoice;
+                  else if (typeof donationChoice === "string") dIndex = donationOptions.indexOf(donationChoice);
+                  const urls = {
+                    0: "https://github.com/sponsors/mikaelkraft",
+                    1: "https://ko-fi.com/mikaelkraft",
+                    2: "0x57ccCC13ba0aBF9Dc7f884E94875e73856160822"
+                  };
+                  if (dIndex === 2) {
+                    acode.setClipboard(urls[2]);
+                    acode.toast("USDT(ERC20) Wallet address copied!");
+                  } else if (dIndex === 0 || dIndex === 1) acode.launchUrl(urls[dIndex]);
+                });
+              },
+              2: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/issues"),
+              3: () => acode.launchUrl("https://discord.gg/3pnGUqKg")
+            };
+            if (actions[selIndex]) actions[selIndex]();
+          } catch (err) {
+            this._log(`Support handler error: ${err && err.message ? err.message : err}`, true);
           }
-        );
-      } catch (e) {
-        this._log(`Support dialog failed: ${e && e.message ? e.message : e}`, true);
-      }
+        }
+      });
     }
 
     static async _checkTermuxAPI() {
@@ -259,7 +240,7 @@ Need help? Check the documentation or support the project.`,
         }
         const hasPubspec = await acode.exec(`[ -f "${projectDir}/pubspec.yaml" ] && echo "1"`);
         if (!hasPubspec && !command.includes("create")) {
-          return { success: false, message: "❌ Not a Flutter project. Run 'flutter create .' first." };
+          return { success: false, message: "❌ Not a Flutter project. Run 'Flutter Create Project' first." };
         }
         const termuxCmd = `
           cd ${projectDir} &&
@@ -288,7 +269,7 @@ Need help? Check the documentation or support the project.`,
       if (!this.config.debugMode) return;
       const timestamp = new Date().toLocaleTimeString();
       console.log(`[Flutter][${timestamp}] ${message}`);
-      if (isError && typeof acode !== "undefined" && acode.toast) {
+      if (isError && acode.toast) {
         acode.toast(`Flutter: ${String(message).substring(0, 50)}`, 5000);
       }
     }
@@ -320,11 +301,9 @@ Need help? Check the documentation or support the project.`,
     static firebaseDeploy = () => this.execute("flutter pub run flutterfire_cli:flutterfire deploy");
   }
 
-  // Initialize the class
   FlutterCompiler.init();
 });
 
 acode.setPluginUnmount('com.mikaelkraft.fluttercompiler', () => {
-  // Cleanup editor-related listeners or commands
   console.log('Flutter Compiler unmounted');
 });
