@@ -1,12 +1,13 @@
 // Flutter Compiler for Acode - Local Only Version
 // By Mikael Kraft (@mikaelkraft)
-// Version 1.0.3 (patched for safer UI argument handling)
+// Version 1.0.5 (patched for minimal init and global error handling)
 
 class FlutterCompiler {
   static config = {
     termuxPath: "$HOME/flutter/bin",
     preferLocal: true,
-    debugMode: false
+    debugMode: false,
+    useTermuxAPI: true
   };
 
   static async init() {
@@ -20,9 +21,8 @@ class FlutterCompiler {
           this._log(`Saved config parse failed: ${e.message}`, true);
         }
       }
-      if (!(await this._checkTermuxAPI()) || !(await this._checkFlutterExists())) {
-        await this._installFlutter();
-      }
+      this._log("Initialization completed with minimal setup");
+      acode.toast("✅ Flutter Compiler initialized. Run a command to start.", 3000);
     } catch (e) {
       this._log(`Initialization failed: ${e && e.message ? e.message : e}`, true);
       acode.toast("❌ Plugin initialization failed. Check logs or prerequisites.", 5000);
@@ -34,8 +34,6 @@ class FlutterCompiler {
       const res = await acode.exec("pm list packages | grep com.termux.api");
       return !!res && res.includes("com.termux.api");
     } catch {
-      this._log("Termux:API not detected", true);
-      acode.toast("❌ Termux:API is required. Install it from F-Droid.", 5000);
       return false;
     }
   }
@@ -59,8 +57,13 @@ class FlutterCompiler {
       source ~/.bashrc
     `;
     try {
+      this._log("Starting Flutter installation");
       acode.toast("⚙️ Setting up Flutter...");
-      await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${encodeURIComponent(INSTALL_CMD)}"`);
+      if (this.config.useTermuxAPI) {
+        await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${encodeURIComponent(INSTALL_CMD)}"`);
+      } else {
+        await acode.exec(INSTALL_CMD);
+      }
       this._log("Flutter installation completed");
       acode.toast("✅ Flutter installed. Restart Acode if needed.", 5000);
     } catch (e) {
@@ -72,24 +75,28 @@ class FlutterCompiler {
 
   static async execute(command) {
     this._log(`Executing: ${command}`);
-    return await this._executeLocal(command);
+    try {
+      const hasTermuxAPI = await this._checkTermuxAPI();
+      this.config.useTermuxAPI = hasTermuxAPI;
+      if (!(await this._checkFlutterExists())) {
+        await this._installFlutter();
+      }
+      return await this._executeLocal(command);
+    } catch (e) {
+      this._log(`Execution failed: ${e && e.message ? e.message : e}`, true);
+      return { success: false, message: `❌ ${e && e.message ? e.message : e}` };
+    }
   }
 
   static async _executeLocal(command) {
     try {
       const projectDir = await editor.getProjectDir();
       if (!projectDir) {
-        return { 
-          success: false, 
-          message: "❌ No project directory found. Please open a project first." 
-        };
+        return { success: false, message: "❌ No project directory found. Please open a project first." };
       }
       const hasPubspec = await acode.exec(`[ -f "${projectDir}/pubspec.yaml" ] && echo "1"`);
       if (!hasPubspec && !command.includes("create")) {
-        return {
-          success: false,
-          message: "❌ Not a Flutter project. Run 'flutter create .' first."
-        };
+        return { success: false, message: "❌ Not a Flutter project. Run 'flutter create .' first." };
       }
       const termuxCmd = `
         cd ${projectDir} &&
@@ -98,22 +105,19 @@ class FlutterCompiler {
       `;
       let result;
       try {
-        result = await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${encodeURIComponent(termuxCmd)}"`);
-      } catch (apiError) {
-        this._log("Termux:API not available, using fallback", true);
-        result = await acode.exec(`termux-exec ${termuxCmd}`);
+        this._log("Executing command via Termux:API or fallback");
+        if (this.config.useTermuxAPI) {
+          result = await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${encodeURIComponent(termuxCmd)}"`);
+        } else {
+          result = await acode.exec(termuxCmd);
+        }
+      } catch (e) {
+        this._log(`Command execution failed: ${e && e.message ? e.message : e}`, true);
+        throw e;
       }
-      return { 
-        success: true, 
-        message: `📱 Running in ${projectDir.split('/').pop()}`,
-        output: result
-      };
+      return { success: true, message: `📱 Running in ${projectDir.split('/').pop()}`, output: result };
     } catch (e) {
-      return { 
-        success: false, 
-        message: `❌ ${e && e.message ? e.message : e}`,
-        error: e ? e.toString() : String(e)
-      };
+      return { success: false, message: `❌ ${e && e.message ? e.message : e}`, error: e ? e.toString() : String(e) };
     }
   }
 
@@ -154,7 +158,14 @@ class FlutterCompiler {
 }
 
 acode.on("initialize", () => {
-  FlutterCompiler.init();
+  try {
+    FlutterCompiler.init();
+  } catch (e) {
+    console.error("Global initialize error:", e);
+    if (typeof acode !== "undefined" && acode.toast) {
+      acode.toast(`❌ Critical error: ${e && e.message ? e.message : e}`, 5000);
+    }
+  }
 });
 
 acode.on("install", async () => {
