@@ -6,6 +6,9 @@
   "readme": "README.md",
   "icon": "assets/flutter_icon.png",
   "files": [
+    "main.js",
+    "README.md",
+    "assets/flutter_icon.png",
     "assets/termux_install.sh"
   ],
   "minVersionCode": 290,
