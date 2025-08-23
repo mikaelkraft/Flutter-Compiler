@@ -1,52 +1,26 @@
 {
+  "id": "com.mikaelkraft.fluttercompiler",
   "name": "Flutter Compiler",
-  "repository": "https://github.com/mikaelkraft/Flutter-Compiler",
-  "version": "1.0.3",
-  "author": "Mikael Kraft (@mikaelkraft)",
-  "description": {
-    "short": "Full Flutter development on Android",
-    "full": "Transform your Android device into a complete Flutter development environment.\n\nFeatures:\n- One-tap Flutter SDK installation\n- Full Flutter/Dart command support\n- Firebase tools integration\n- Termux-powered local execution\n- Real-time debugging and testing\n\nPrerequisites:\n• Termux (F-Droid)\n• Termux:API (F-Droid) - Required for command execution\n• Acode X Terminal Plugin (Recommended)\n\nSupport Development:\n• [GitHub Sponsors](https://github.com/sponsors/mikaelkraft)\n• [Buy Me a Coffee](https://ko-fi.com/mikaelkraft)\n• [Report Issues](https://github.com/mikaelkraft/Flutter-Compiler/issues)\n\nNeed Help? Join our [Discord Community](https://discord.gg/3pnGUqKg)"
-  },
-  "links": {
-    "support": "https://github.com/mikaelkraft/Flutter-Compiler/discussions",
-    "donate": "https://github.com/sponsors/mikaelkraft",
-    "documentation": "https://github.com/mikaelkraft/Flutter-Compiler/wiki"
-  },
-  "license": "MIT",
-  "github": "mikaelkraft",
   "main": "main.js",
+  "version": "1.0.3",
+  "readme": "README.md",
   "icon": "assets/flutter_icon.png",
-  "permissions": [
-    "exec",
-    "file",
-    "storage",
-    "clipboard",
-    "internet"
-  ],
-  "assets": [
-    "assets/flutter_icon.png",
+  "files": [
     "assets/termux_install.sh"
   ],
-  "acodeVersion": "1.9.0",
-  "dependencies": {
-    "termux-api": ">=0.50"
+  "minVersionCode": 290,
+  "repository": "https://github.com/mikaelkraft/Flutter-Compiler",
+  "author": {
+    "name": "Mikael Kraft",
+    "github": "mikaelkraft"
   },
-  "prerequisites": [
-    "Termux (F-Droid)",
-    "Termux:API (F-Droid)",
-    "Acode X Terminal Plugin (Recommended)"
-  ],
-  "tags": [
+  "license": "MIT",
+  "keywords": [
     "flutter",
     "dart",
     "mobile-development",
     "android",
     "termux",
     "compiler"
-  ],
-  "changelog": {
-    "1.0.3": "Added Termux:API requirement, enhanced error handling, and project validation",
-    "1.0.2": "Optimized for local-only execution with enhanced Termux integration",
-    "1.0.1": "Initial release"
-  }
+  ]
 }

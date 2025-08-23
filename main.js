@@ -3,14 +3,12 @@
 // Version 1.0.3 (patched for safer UI argument handling)
 
 class FlutterCompiler {
-  // Simplified configuration
   static config = {
     termuxPath: "$HOME/flutter/bin",
-    preferLocal: true, // Always true now
+    preferLocal: true,
     debugMode: false
   };
 
-  /* [INITIALIZATION] */
   static async init() {
     try {
       const savedConfig = await acode.getSecureConfig("flutter_compiler");
@@ -20,14 +18,12 @@ class FlutterCompiler {
           this.config = { 
             ...this.config, 
             ...parsed,
-            preferLocal: true // Force local mode
+            preferLocal: true
           };
         } catch (e) {
-          // if saved config corrupt, ignore it
           this._log(`Saved config parse failed: ${e.message}`, true);
         }
       }
-      
       if (!(await this._checkFlutterExists())) {
         await this._installFlutter();
       }
@@ -39,7 +35,6 @@ class FlutterCompiler {
   static async _checkFlutterExists() {
     try {
       const res = await acode.exec(`[ -d "${this.config.termuxPath}" ] && echo "1"`);
-      // normalize result: some acode.exec return string, some boolean, etc.
       return !!res && String(res).trim() === "1";
     } catch {
       return false;
@@ -49,13 +44,12 @@ class FlutterCompiler {
   static async _installFlutter() {
     const INSTALL_CMD = `
       pkg update -y && 
-      pkg install -y git wget openjdk-17 dart && 
-      wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.22.2-stable.tar.xz && 
+      pkg install -y git wget openjdk-17 dart cmake ninja clang && 
+      wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.35.1-stable.tar.xz && 
       tar xf flutter_linux_*.tar.xz && 
       echo 'export PATH="\\$PATH:\\$HOME/flutter/bin"' >> ~/.bashrc && 
       source ~/.bashrc
     `;
-    
     try {
       acode.toast("⚙️ Setting up Flutter...");
       await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${encodeURIComponent(INSTALL_CMD)}"`);
@@ -66,26 +60,20 @@ class FlutterCompiler {
     }
   }
 
-  /* [CORE EXECUTION] */
   static async execute(command) {
     this._log(`Executing: ${command}`);
-    return await this._executeLocal(command); // Always use local execution
+    return await this._executeLocal(command);
   }
 
-  /* [LOCAL EXECUTION] */
   static async _executeLocal(command) {
     try {
       const projectDir = await editor.getProjectDir();
-      
-      // Check if project directory exists
       if (!projectDir) {
         return { 
           success: false, 
           message: "❌ No project directory found. Please open a project first." 
         };
       }
-      
-      // Check if it's a Flutter project
       const hasPubspec = await acode.exec(`[ -f "${projectDir}/pubspec.yaml" ] && echo "1"`);
       if (!hasPubspec && !command.includes("create")) {
         return {
@@ -93,23 +81,18 @@ class FlutterCompiler {
           message: "❌ Not a Flutter project. Run 'flutter create .' first."
         };
       }
-      
       const termuxCmd = `
         cd ${projectDir} &&
         export PATH="$PATH:${this.config.termuxPath}" &&
         ${command}
       `;
-      
-      // Try Termux:API first for better integration
       let result;
       try {
         result = await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${encodeURIComponent(termuxCmd)}"`);
       } catch (apiError) {
-        // Fallback to basic Termux execution
         this._log("Termux:API not available, using fallback", true);
         result = await acode.exec(`termux-exec ${termuxCmd}`);
       }
-      
       return { 
         success: true, 
         message: `📱 Running in ${projectDir.split('/').pop()}`,
@@ -124,7 +107,6 @@ class FlutterCompiler {
     }
   }
 
-  /* [LOGGING] */
   static _log(message, isError = false) {
     if (!this.config.debugMode) return;
     const timestamp = new Date().toLocaleTimeString();
@@ -134,7 +116,6 @@ class FlutterCompiler {
     }
   }
 
-  /* [COMMAND SHORTCUTS] */
   static doctor = () => this.execute("flutter doctor --no-upgrade");
   static pubGet = () => this.execute("flutter pub get");
   static buildApk = () => this.execute("flutter build apk --release");
@@ -162,16 +143,12 @@ class FlutterCompiler {
   static firebaseDeploy = () => this.execute("flutter pub run flutterfire_cli:flutterfire deploy");
 }
 
-/* [PLUGIN UI SETUP] */
 acode.on("initialize", () => {
   FlutterCompiler.init();
 });
 
-// Installation Welcome Message
 acode.on("install", async () => {
   try {
-    // Some Acode versions expect an array of labels and return an index.
-    // Use a simple array of strings for maximum compatibility.
     const buttons = ["Get Started", "View Docs", "Donate"];
     const choiceIndex = await acode.confirm(
       "🎉 Flutter Compiler Installed!",
@@ -180,52 +157,40 @@ acode.on("install", async () => {
 Need help? Check the documentation or support the project.`,
       buttons
     );
-
-    // Normalize returned value: could be index (number) or string label
     let choice = null;
     if (typeof choiceIndex === "number") {
       choice = buttons[choiceIndex];
     } else if (typeof choiceIndex === "string") {
-      // If older/newer versions return id or label, match against known labels
       choice = choiceIndex;
     }
-
     if (choice === "View Docs") {
       acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki");
     } else if (choice === "Donate") {
       acode.launchUrl("https://github.com/sponsors/mikaelkraft");
-    } else {
-      // default "Get Started" -> do nothing, just dismiss
     }
   } catch (e) {
-    // If acode.confirm shape differs or throws, fail gracefully
     FlutterCompiler._log(`Install dialog failed: ${e && e.message ? e.message : e}`, true);
   }
 });
 
-// Unified Help & Support Menu
 acode.setPluginMenu("❓ Help & Support", () => {
-  // Ensure options passed are arrays of strings
   const supportOptions = [
     "📚 Documentation",
     "💖 Sponsor Development", 
     "🐛 Report Issues",
     "💬 Join Community"
   ];
-
   acode.showPicker(
     "Flutter Compiler - Support",
     supportOptions,
     (selected) => {
       try {
-        // selected might be index (number) or label (string). Normalize.
         let selIndex = -1;
         if (typeof selected === "number") {
           selIndex = selected;
         } else if (typeof selected === "string") {
           selIndex = supportOptions.indexOf(selected);
         }
-
         const actions = {
           0: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki"),
           1: () => {
@@ -267,7 +232,6 @@ acode.setPluginMenu("❓ Help & Support", () => {
   );
 });
 
-// Settings Menu
 acode.setPluginMenu("⚙️ Settings", () => {
   const inputFields = [
     {
@@ -276,10 +240,8 @@ acode.setPluginMenu("⚙️ Settings", () => {
       checked: !!FlutterCompiler.config.debugMode
     }
   ];
-
   acode.showInputDialog("Compiler Settings", inputFields, async (values) => {
     try {
-      // values may be an array or object depending on Acode version
       let debugVal = false;
       if (Array.isArray(values)) {
         debugVal = !!values[0];
@@ -298,7 +260,6 @@ acode.setPluginMenu("⚙️ Settings", () => {
   });
 });
 
-// Command Menu - FIXED: Proper array definition and iteration
 const commandMenuItems = [
   { icon: "🆕", name: "Create Project", cmd: "createProject" },
   { icon: "🩺", name: "Flutter Doctor", cmd: "doctor" },
@@ -315,7 +276,6 @@ const commandMenuItems = [
   { icon: "🧪", name: "Run Tests", cmd: "test" }
 ];
 
-// Proper iteration using for loop
 for (let i = 0; i < commandMenuItems.length; i++) {
   const item = commandMenuItems[i];
   acode.setPluginMenu(`${item.icon} ${item.name}`, () => {
@@ -335,7 +295,6 @@ for (let i = 0; i < commandMenuItems.length; i++) {
   });
 }
 
-// Add project validation on startup
 acode.on("editorOpen", async () => {
   try {
     const projectDir = await editor.getProjectDir();
