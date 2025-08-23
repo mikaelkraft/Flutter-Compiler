@@ -1,6 +1,6 @@
 // Flutter Compiler for Acode - Local Only Version
 // By Mikael Kraft (@mikaelkraft)
-// Version 1.0.6 (patched for proper setPluginInit registration, editor command cleanup, and compatibility with Acode 1.11.x)
+// Version 1.0.7 (patched for removal of acode.on, adjusted for Acode 1.11.x API)
 
 acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheFileUrl, cacheFile }) => {
   class FlutterCompiler {
@@ -8,7 +8,8 @@ acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheF
       termuxPath: "$HOME/flutter/bin",
       preferLocal: true,
       debugMode: false,
-      useTermuxAPI: true
+      useTermuxAPI: true,
+      isFirstRun: true // Flag for initial install dialog
     };
 
     static async init() {
@@ -22,11 +23,42 @@ acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheF
             this._log(`Saved config parse failed: ${e.message}`, true);
           }
         }
+        if (this.config.isFirstRun) {
+          await this._showInstallDialog();
+          this.config.isFirstRun = false;
+          await acode.setSecureConfig("flutter_compiler", JSON.stringify(this.config));
+        }
         this._log("Initialization completed with minimal setup");
         acode.toast("✅ Flutter Compiler initialized. Run a command to start.", 3000);
       } catch (e) {
         this._log(`Initialization failed: ${e && e.message ? e.message : e}`, true);
         acode.toast("❌ Plugin initialization failed. Check logs or prerequisites.", 5000);
+      }
+    }
+
+    static async _showInstallDialog() {
+      try {
+        const buttons = ["Get Started", "View Docs", "Donate"];
+        const choiceIndex = await acode.confirm(
+          "🎉 Flutter Compiler Installed!",
+          `Transform your Android device into a Flutter development environment!
+          
+Need help? Check the documentation or support the project.`,
+          buttons
+        );
+        let choice = null;
+        if (typeof choiceIndex === "number") {
+          choice = buttons[choiceIndex];
+        } else if (typeof choiceIndex === "string") {
+          choice = choiceIndex;
+        }
+        if (choice === "View Docs") {
+          acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki");
+        } else if (choice === "Donate") {
+          acode.launchUrl("https://github.com/sponsors/mikaelkraft");
+        }
+      } catch (e) {
+        this._log(`Install dialog failed: ${e && e.message ? e.message : e}`, true);
       }
     }
 
@@ -161,33 +193,6 @@ acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheF
   // Initialize the class
   FlutterCompiler.init();
 
-  // Handle post-install dialog
-  acode.on("install", async () => {
-    try {
-      const buttons = ["Get Started", "View Docs", "Donate"];
-      const choiceIndex = await acode.confirm(
-        "🎉 Flutter Compiler Installed!",
-        `Transform your Android device into a Flutter development environment!
-        
-Need help? Check the documentation or support the project.`,
-        buttons
-      );
-      let choice = null;
-      if (typeof choiceIndex === "number") {
-        choice = buttons[choiceIndex];
-      } else if (typeof choiceIndex === "string") {
-        choice = choiceIndex;
-      }
-      if (choice === "View Docs") {
-        acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki");
-      } else if (choice === "Donate") {
-        acode.launchUrl("https://github.com/sponsors/mikaelkraft");
-      }
-    } catch (e) {
-      FlutterCompiler._log(`Install dialog failed: ${e && e.message ? e.message : e}`, true);
-    }
-  });
-
   // Set up menus
   acode.setPluginMenu("❓ Help & Support", () => {
     const supportOptions = [
@@ -311,23 +316,12 @@ Need help? Check the documentation or support the project.`,
     });
   }
 
-  acode.on("editorOpen", async () => {
-    try {
-      const projectDir = await editor.getProjectDir();
-      if (projectDir) {
-        const hasPubspec = await acode.exec(`[ -f "${projectDir}/pubspec.yaml" ] && echo "1"`);
-        if (!hasPubspec) {
-          acode.toast("⚠️ Not a Flutter project. Use 'Create Project' first.", 4000);
-        }
-      }
-    } catch (e) {
-      FlutterCompiler._log(`editorOpen handler error: ${e && e.message ? e.message : e}`, true);
-    }
-  });
+  // Alternative for editorOpen: Poll editor state or use a menu trigger
+  // For now, rely on user to open a project; enhance later if needed
 });
 
 acode.setPluginUnmount('com.mikaelkraft.fluttercompiler', () => {
   // Cleanup editor-related listeners or commands
-  acode.off("editorOpen");
+  acode.off("editorOpen"); // Safe to call even if not defined
   console.log('Flutter Compiler unmounted');
 });

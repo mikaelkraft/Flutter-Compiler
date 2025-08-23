@@ -2,7 +2,7 @@
   "id": "com.mikaelkraft.fluttercompiler",
   "name": "Flutter Compiler",
   "main": "main.js",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "readme": "README.md",
   "icon": "assets/flutter_icon.png",
   "files": [
