@@ -15,20 +15,28 @@ class FlutterCompiler {
       if (savedConfig) {
         try {
           const parsed = JSON.parse(savedConfig);
-          this.config = { 
-            ...this.config, 
-            ...parsed,
-            preferLocal: true
-          };
+          this.config = { ...this.config, ...parsed, preferLocal: true };
         } catch (e) {
           this._log(`Saved config parse failed: ${e.message}`, true);
         }
       }
-      if (!(await this._checkFlutterExists())) {
+      if (!(await this._checkTermuxAPI()) || !(await this._checkFlutterExists())) {
         await this._installFlutter();
       }
     } catch (e) {
       this._log(`Initialization failed: ${e && e.message ? e.message : e}`, true);
+      acode.toast("❌ Plugin initialization failed. Check logs or prerequisites.", 5000);
+    }
+  }
+
+  static async _checkTermuxAPI() {
+    try {
+      const res = await acode.exec("pm list packages | grep com.termux.api");
+      return !!res && res.includes("com.termux.api");
+    } catch {
+      this._log("Termux:API not detected", true);
+      acode.toast("❌ Termux:API is required. Install it from F-Droid.", 5000);
+      return false;
     }
   }
 
@@ -54,8 +62,10 @@ class FlutterCompiler {
       acode.toast("⚙️ Setting up Flutter...");
       await acode.exec(`am startservice -n com.termux/.app.TermuxService -e cmd "${encodeURIComponent(INSTALL_CMD)}"`);
       this._log("Flutter installation completed");
+      acode.toast("✅ Flutter installed. Restart Acode if needed.", 5000);
     } catch (e) {
       this._log(`Installation failed: ${e && e.message ? e.message : e}`, true);
+      acode.toast("❌ Flutter installation failed. Check Termux or run manually.", 5000);
       throw e;
     }
   }
@@ -112,7 +122,7 @@ class FlutterCompiler {
     const timestamp = new Date().toLocaleTimeString();
     console.log(`[Flutter][${timestamp}] ${message}`);
     if (isError && typeof acode !== "undefined" && acode.toast) {
-      acode.toast(`Flutter: ${String(message).substring(0, 50)}`, 3000);
+      acode.toast(`Flutter: ${String(message).substring(0, 50)}`, 5000);
     }
   }
 
