@@ -1,6 +1,6 @@
 // Flutter Compiler for Acode - Local Only Version
 // By Mikael Kraft (@mikaelkraft)
-// Version 1.0.9 (patched for command palette integration, removed UI/menu rendering)
+// Version 1.0.9 (patched for command palette integration and UI/menu rendering)
 
 acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheFileUrl, cacheFile }) => {
   class FlutterCompiler {
