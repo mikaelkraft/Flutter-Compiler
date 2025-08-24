@@ -79,77 +79,7 @@ acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheF
           { name: "Flutter Run Tests", description: "Execute test suite", exec: () => this.test() }
         ];
 
-        commands.forEach(cmd => {
-          acode.addCommand({
-            name: cmd.name,
-            description: cmd.description,
-            bindKey: { win: null, mac: null },
-            exec: async () => {
-              try {
-                const res = await cmd.exec();
-                if (res && res.message) acode.toast(res.message);
-                else acode.toast("\u2705 Command finished");
-                if (res && res.error) this._log(`Error: ${res.error}`, true);
-              } catch (error) {
-                acode.toast(`\u274c Failed: ${error && error.message ? error.message : error}`);
-                this._log(`Execution error: ${error}`, true);
-              }
-            }
-          });
-        });
-
-        // Add sidebar command to open the UI
-        acode.addCommand({
-          name: "Flutter Compiler UI",
-          description: "Open the Flutter Compiler control panel",
-          bindKey: { win: null, mac: null },
-          exec: () => FlutterCompiler.showUI()
-        });
-
-        acode.addCommand({
-          name: "Flutter Help & Support",
-          description: "Access documentation and support",
-          bindKey: { win: null, mac: null },
-          exec: async () => {
-            try {
-              const supportOptions = [
-                "📚 Documentation",
-                "💖 Sponsor Development", 
-                "🐛 Report Issues",
-                "💬 Join Community"
-              ];
-              const selected = await acode.prompt("Flutter Compiler - Support", supportOptions, "select");
-              let selIndex = -1;
-              if (typeof selected === "number") selIndex = selected;
-              else if (typeof selected === "string") selIndex = supportOptions.indexOf(selected);
-              const actions = {
-                0: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki"),
-                1: () => {
-                  const donationOptions = ["GitHub Sponsors (Monthly)", "Buy Me a Coffee (One-time)", "Copy Crypto Address (USDT on ERC20)"];
-                  acode.prompt("Support Options", donationOptions, "select").then(donationChoice => {
-                    let dIndex = -1;
-                    if (typeof donationChoice === "number") dIndex = donationChoice;
-                    else if (typeof donationChoice === "string") dIndex = donationOptions.indexOf(donationChoice);
-                    const urls = {
-                      0: "https://github.com/sponsors/mikaelkraft",
-                      1: "https://ko-fi.com/mikaelkraft",
-                      2: "0x57ccCC13ba0aBF9Dc7f884E94875e73856160822"
-                    };
-                    if (dIndex === 2) {
-                      acode.setClipboard(urls[2]);
-                      acode.toast("USDT(ERC20) Wallet address copied!");
-                    } else if (dIndex === 0 || dIndex === 1) acode.launchUrl(urls[dIndex]);
-                  });
-                },
-                2: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/issues"),
-                3: () => acode.launchUrl("https://discord.gg/3pnGUqKg")
-              };
-              if (actions[selIndex]) actions[selIndex]();
-            } catch (err) {
-              this._log(`Support handler error: ${err && err.message ? err.message : err}`, true);
-            }
-          }
-        });
+  // No command registration; all actions are handled via the $page UI
 
         acode.addCommand({
           name: "Flutter Compiler Settings",
