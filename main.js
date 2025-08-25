@@ -81,39 +81,14 @@ acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheF
 
   // No command registration; all actions are handled via the $page UI
 
-        acode.addCommand({
-          name: "Flutter Compiler Settings",
-          description: "Configure Flutter Compiler plugin",
-          bindKey: { win: null, mac: null },
-          exec: async () => {
-            try {
-              const inputFields = [
-                {
-                  label: "Debug Mode",
-                  type: "checkbox",
-                  checked: !!this.config.debugMode
-                }
-              ];
-              const values = await acode.prompt("Compiler Settings", inputFields, "checkbox");
-              let debugVal = false;
-              if (Array.isArray(values)) debugVal = !!values[0];
-              else if (values && typeof values === "object" && "0" in values) debugVal = !!values[0];
-              else if (typeof values === "boolean") debugVal = values;
-              this.config.debugMode = debugVal;
-              await acode.setSecureConfig("flutter_compiler", JSON.stringify(this.config));
-              acode.toast("✅ Settings saved");
-            } catch (e) {
-              this._log(`Settings save failed: ${e && e.message ? e.message : e}`, true);
-              acode.toast("❌ Failed to save settings");
-            }
-          }
-        });
+  // Removed acode.addCommand for settings; use $page UI for configuration if needed
       }
 
       static showUI() {
         $page.show(
           `<div style="padding:16px;max-width:400px;margin:auto;">
             <h2 style="text-align:center;">Flutter Compiler</h2>
+            <button id="fc-settings" style="width:100%;margin:8px 0;background:#eee;">⚙️ Settings</button>
             <button id="fc-create" style="width:100%;margin:8px 0;">Create Project</button>
             <button id="fc-doctor" style="width:100%;margin:8px 0;">Flutter Doctor</button>
             <button id="fc-pubget" style="width:100%;margin:8px 0;">Pub Get</button>
@@ -146,6 +121,87 @@ acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheF
                 };
                 if (el) el.setAttribute('data-label', el.textContent);
               };
+              bind('fc-settings', async () => {
+                try {
+                  const inputFields = [
+                    {
+                      label: "Flutter SDK Path",
+                      type: "text",
+                      value: FlutterCompiler.config.termuxPath || ""
+                    },
+                    {
+                      label: "Show First Run Dialog",
+                      type: "checkbox",
+                      checked: !!FlutterCompiler.config.isFirstRun
+                    },
+                    {
+                      label: "Debug Mode",
+                      type: "checkbox",
+                      checked: !!FlutterCompiler.config.debugMode
+                    },
+                    {
+                      label: "Verbose Logging",
+                      type: "checkbox",
+                      checked: !!FlutterCompiler.config.verboseLogging
+                    },
+                    {
+                      label: "Default Project Directory",
+                      type: "text",
+                      value: FlutterCompiler.config.defaultProjectDir || ""
+                    },
+                    {
+                      label: "Dark Theme",
+                      type: "checkbox",
+                      checked: !!FlutterCompiler.config.darkTheme
+                    }
+                  ];
+                  const values = await acode.prompt("Advanced Settings", inputFields, "form");
+                  if (Array.isArray(values)) {
+                    FlutterCompiler.config.termuxPath = values[0] || "";
+                    FlutterCompiler.config.isFirstRun = !!values[1];
+                    FlutterCompiler.config.debugMode = !!values[2];
+                    FlutterCompiler.config.verboseLogging = !!values[3];
+                    FlutterCompiler.config.defaultProjectDir = values[4] || "";
+                    FlutterCompiler.config.darkTheme = !!values[5];
+                  }
+                  await acode.setSecureConfig("flutter_compiler", JSON.stringify(FlutterCompiler.config));
+                  acode.toast("✅ Settings saved");
+                  // Optionally apply theme
+                  if (FlutterCompiler.config.darkTheme) {
+                    document.body.classList.add("fc-dark-theme");
+                  } else {
+                    document.body.classList.remove("fc-dark-theme");
+                  }
+                } catch (e) {
+                  acode.toast("❌ Failed to save settings");
+                }
+              });
+              // Add reset settings button
+              if (!document.getElementById('fc-reset-settings')) {
+                const settingsBtn = document.getElementById('fc-settings');
+                if (settingsBtn) {
+                  const resetBtn = document.createElement('button');
+                  resetBtn.id = 'fc-reset-settings';
+                  resetBtn.textContent = 'Reset All Settings';
+                  resetBtn.style = 'width:100%;margin:8px 0;background:#fdd;color:#900;';
+                  settingsBtn.parentNode.insertBefore(resetBtn, settingsBtn.nextSibling);
+                  resetBtn.onclick = async () => {
+                    FlutterCompiler.config = {
+                      termuxPath: "$HOME/flutter/bin",
+                      preferLocal: true,
+                      debugMode: false,
+                      useTermuxAPI: true,
+                      isFirstRun: true,
+                      verboseLogging: false,
+                      defaultProjectDir: "",
+                      darkTheme: false
+                    };
+                    await acode.setSecureConfig("flutter_compiler", JSON.stringify(FlutterCompiler.config));
+                    acode.toast("✅ Settings reset to defaults");
+                    document.body.classList.remove("fc-dark-theme");
+                  };
+                }
+              }
               bind('fc-create', FlutterCompiler.createProject);
               bind('fc-doctor', FlutterCompiler.doctor);
               bind('fc-pubget', FlutterCompiler.pubGet);
