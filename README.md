@@ -1,24 +1,32 @@
+
 # 🚀 Flutter Compiler for Acode
 
-**Turn your Android device into a full Flutter development environment**  
+**Transform your Android device into a full-featured Flutter development environment, with a modern UI and advanced settings.**  
 *By [Mikael Kraft](https://github.com/mikaelkraft)*
 
 ![Flutter Logo](assets/flutter_icon.png)
 
 ---
 
-## ✨ Features
+## ✨ Features (v1.0.9)
 
-- **One-tap Flutter SDK installer** ([Termux](https://f-droid.org/en/packages/com.termux/), [Termux:API](https://f-droid.org/en/packages/com.termux.api/))
-- **Complete Flutter/Dart toolchain**:
-    ```bash
-    flutter create | run | build | pub get | doctor
-    dart analyze | format | test
-    ```
-- **Firebase Tools integration**:
-    ```bash
-    flutterfire configure | deploy
-    ```
+- **One-tap Flutter SDK installer** (Termux/Termux:API integration)
+- **Full Flutter/Dart toolchain:**
+    - `flutter create`, `run`, `build`, `pub get`, `doctor`
+    - `dart analyze`, `format`, `test`
+- **Firebase Tools integration:**
+    - `flutterfire configure`, `deploy`
+- **Modern UI:**
+    - All actions available via plugin sidebar panel
+    - No command palette registration required
+- **Advanced Settings:**
+    - Flutter SDK path
+    - First run dialog toggle
+    - Debug mode
+    - Verbose logging
+    - Default project directory
+    - Dark theme toggle (live preview)
+    - Reset all settings to defaults
 
 ---
 
@@ -26,49 +34,49 @@
 
 ### Prerequisites
 
-1. [Acode Editor (Google Play)](https://play.google.com/store/apps/details?id=com.foxdebug.acodefree)
+1. [Acode Editor](https://play.google.com/store/apps/details?id=com.foxdebug.acodefree)
 2. [Termux (F-Droid)](https://f-droid.org/en/packages/com.termux/)
-3. [Termux:API (F-Droid)](https://f-droid.org/en/packages/com.termux.api/) — Required for command execution
-4. [Acode X Terminal Plugin](https://acode.foxdebug.com/plugins) — Download from Acode's plugin directory
+3. [Termux:API (F-Droid)](https://f-droid.org/en/packages/com.termux.api/)
+4. [Acode X Terminal Plugin](https://acode.foxdebug.com/plugins) (optional, for terminal integration)
 
 ### Installation
 
-#### Install via Acode:
-```text
+**Via Acode:**
+```
 Settings → Plugins → Install from URL:
 https://github.com/mikaelkraft/Flutter-Compiler
 ```
 
-#### Or Install via Termux:
-
-1. Install [Termux](https://f-droid.org/en/packages/com.termux/) and [Termux:API](https://f-droid.org/en/packages/com.termux.api/) from F-Droid.
-2. Run the following in Termux:
-   ```bash
-   pkg install git
-   git clone https://github.com/mikaelkraft/Flutter-Compiler
-   acode install Flutter-Compiler
-   ```
-3. Accept all permissions
+**Via Termux:**
+```
+pkg install git
+git clone https://github.com/mikaelkraft/Flutter-Compiler
+acode install Flutter-Compiler
+```
+Accept all permissions when prompted.
 
 ---
 
 ## 🛠️ First-Run Setup
 
-The plugin will automatically:
+On first launch, the plugin will:
 
-1. Install Flutter SDK in Termux (~1.5GB)
-2. Configure environment paths
-3. Verify with `flutter doctor`
+1. Show a welcome dialog (can be toggled in settings)
+2. Install Flutter SDK in Termux (~1.5GB)
+3. Configure environment paths
+4. Verify with `flutter doctor`
 
 ---
 
 ## 🎮 Usage
 
-Access all commands via:
+Access all features via:
 
-```text
+```
 Acode Menu → Plugins → Flutter Compiler
 ```
+
+Or open the sidebar panel for a modern UI with action buttons and settings.
 
 ### Command Cheatsheet
 
@@ -83,111 +91,62 @@ Acode Menu → Plugins → Flutter Compiler
 | FlutterFire Setup   | Configure Firebase                  |
 | Firebase Deploy     | Deploy to Firebase                  |
 | Clean Project       | Remove build files                  |
+| Repair Packages     | Fix dependency issues               |
 | Code Analysis       | Check for errors                    |
 | Format Code         | Format Dart code                    |
 | Run Tests           | Execute test suite                  |
 
 ---
 
-## 🚀 Flutter Development in Acode - Full Workflow
+## 🚀 Flutter Development Workflow
 
-### 1. Create a New Project
+1. **Create a New Project**
+    - Open Acode's file manager
+    - Create a folder for your project (e.g. `my_app`)
+    - Use "Create Project" from the plugin UI
 
-1. Open Acode's file manager
-2. Create a folder for your project (e.g. `my_app`)
-3. Use the "Create Project" command from the plugin menu
+2. **Write Your Code**
+    - Edit `lib/main.dart`, `pubspec.yaml`, and test files in Acode
 
-### 2. Write Your Code
+3. **Run Commands**
+    - Use the plugin UI for all Flutter/Dart actions
 
-- Use Acode's editor for:
-  - `lib/main.dart` (Main app code)
-  - `pubspec.yaml` (Dependencies)
-  - `test/` (Test files)
+4. **Debug & Build**
+    - Run `flutter run` and view logs in Termux or Acode X Terminal
+    - Build APK/AppBundle for release
 
-### 3. Run Commands via Plugin
+5. **Advanced**
+    - Hot reload: Save in Acode, press `r` in Termux
+    - Hot restart: Press `R` in Termux
+    - Run tests: Use "Run Tests" in plugin
 
-Access these through:
-
-```text
-Acode Menu → Plugins → Flutter Compiler
-```
-
-### 4. Debugging Workflow
-
-1. Make code changes in Acode
-2. Run `flutter run` through the plugin
-3. View logs directly in Termux or Acode X Terminal
-
-### 5. Building for Release
-
-Via plugin menu:
-```text
-1. Build AppBundle (for Play Store)
-2. Build APK (for direct install)
-```
-
-### 6. Advanced Usage
-
-**Hot Reload (After running app):**
-1. Save changes in Acode (`Ctrl+S`)
-2. Press `r` in Termux where `flutter run` is active
-
-**Hot Restart:** Press `R` in Termux for full restart
-
-**Testing:** Use the "Run Tests" command to execute `flutter test`
-
-### 7. Project Management
-
-- Clean Project: Removes build files
-- Repair Packages: Fixes dependency issues
-- Code Analysis: Checks for errors and warnings
+6. **Settings**
+    - Access advanced settings from the plugin UI
+    - Configure SDK path, theme, logging, and more
+    - Reset settings to defaults if needed
 
 ---
 
 ## 🧭 Termux:API Requirement
 
-[Termux:API](https://f-droid.org/en/packages/com.termux.api/) is essential for this plugin to function properly. It provides:
-
-- Secure command execution from Acode to Termux
-- Background service for long-running processes
-- Proper environment access for Flutter tools
-- Reliable communication between apps
-
-**Installation Steps:**
-
-1. Install [Termux:API](https://f-droid.org/en/packages/com.termux.api/) from F-Droid
-2. Grant necessary permissions when prompted
-3. The plugin will automatically detect and use Termux:API
+[Termux:API](https://f-droid.org/en/packages/com.termux.api/) is required for secure command execution and background processes. The plugin will auto-detect and use Termux:API if installed.
 
 ---
 
 ## 🧭 Acode X Terminal Integration
 
-[Acode X Terminal Plugin](https://acode.foxdebug.com/plugins) complements this plugin by providing:
-
-- Integrated terminal inside Acode editor
-- Quick command execution alongside your code
-- Real-time log viewing during development
-- Easy access to Termux environment
-
-**Use Cases:**
-
-- View `flutter run` output while coding
-- Run quick Dart commands without switching apps
-- Monitor build processes in real-time
+[Acode X Terminal Plugin](https://acode.foxdebug.com/plugins) is recommended for real-time log viewing and quick command execution inside Acode.
 
 ---
 
 ## ❓ Troubleshooting
-
-### Common Issues
 
 | Error                | Solution                                |
 |----------------------|-----------------------------------------|
 | Termux not found     | Install from F-Droid (required)         |
 | Termux:API missing   | Install Termux:API from F-Droid         |
 | Storage access       | Run: `termux-setup-storage` in Termux   |
-| Flutter not found    | Re-run installer:<br>```bash<br>bash ~/flutter_installer.sh<br>``` |
+| Flutter not found    | Re-run installer or reset settings      |
 | Permission denied    | Grant Termux storage permissions        |
 
 ---
@@ -197,9 +156,8 @@ Via plugin menu:
 If automatic setup fails, run in Termux:
 
 ```bash
-# Manual Flutter installation
 pkg update && pkg install git wget openjdk-17 dart
-wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.22.2-stable.tar.xz
+wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.35.1-stable.tar.xz
 tar xf flutter_linux_*.tar.xz
 echo 'export PATH="$PATH:$HOME/flutter/bin"' >> ~/.bashrc
 source ~/.bashrc
@@ -212,9 +170,10 @@ source ~/.bashrc
 ### Plugin Structure
 
 ```
-flutter_compiler_acode/
+Flutter-Compiler/
 ├── plugin.json          # Metadata
 ├── main.js              # Core logic
+├── README.md            # Documentation
 └── assets/
     ├── flutter_icon.png
     └── termux_install.sh # Auto-installer
@@ -222,9 +181,9 @@ flutter_compiler_acode/
 
 ### Requirements
 
-- Android 8.0+ (for Termux support)
-- Minimum 2GB free storage (for Flutter SDK)
-- Internet connection for initial setup
+- Android 8.0+ (Termux support)
+- Minimum 2GB free storage (Flutter SDK)
+- Internet connection for setup
 
 ---
 
