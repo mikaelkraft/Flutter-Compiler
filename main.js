@@ -347,13 +347,8 @@ acode.setPluginInit('com.mikaelkraft.fluttercompiler', (baseUrl, $page, { cacheF
 
   FlutterCompiler.init();
 
-  // Register sidebar command to open the UI (outside the class)
-  acode.addCommand({
-    name: "Flutter Compiler UI",
-    description: "Open the Flutter Compiler control panel",
-    bindKey: { win: null, mac: null },
-    exec: () => FlutterCompiler.showUI()
-  });
+  // The sidebar command registration (acode.addCommand) is no longer required.
+  // Use the UI via FlutterCompiler.showUI() or command palette if supported.
 });
 
 acode.setPluginUnmount('com.mikaelkraft.fluttercompiler', () => {
