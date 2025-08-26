@@ -1,4 +1,3 @@
-
 # 🚀 Flutter Compiler for Acode
 
 **Transform your Android device into a full-featured Flutter development environment, with a modern UI and advanced settings.**  
@@ -11,22 +10,21 @@
 ## ✨ Features (v1.0.9)
 
 - **One-tap Flutter SDK installer** (Termux/Termux:API integration)
-- **Full Flutter/Dart toolchain:**
-    - `flutter create`, `run`, `build`, `pub get`, `doctor`
+- **Full Flutter/Dart toolchain:**  
+    - `flutter create`, `run`, `build`, `pub get`, `doctor`  
     - `dart analyze`, `format`, `test`
-- **Firebase Tools integration:**
+- **Firebase Tools integration:**  
     - `flutterfire configure`, `deploy`
-- **Modern UI:**
-    - All actions available via plugin sidebar panel
+- **Modern UI:**  
+    - All actions available via plugin menu  
     - No command palette registration required
-- **Advanced Settings:**
-    - Flutter SDK path
-    - First run dialog toggle
-    - Debug mode
-    - Verbose logging
-    - Default project directory
-    - Dark theme toggle (live preview)
+- **Advanced Settings:**  
+    - Flutter SDK path  
+    - Debug mode  
     - Reset all settings to defaults
+- **Dedicated Menus:**  
+    - Help & Support, Docs, Donate, Community links  
+    - Changelog (see [CHANGELOG.md](CHANGELOG.md))
 
 ---
 
@@ -41,13 +39,13 @@
 
 ### Installation
 
-**Via Acode:**
+**Via Acode:**  
 ```
 Settings → Plugins → Install from URL:
 https://github.com/mikaelkraft/Flutter-Compiler
 ```
 
-**Via Termux:**
+**Via Termux:**  
 ```
 pkg install git
 git clone https://github.com/mikaelkraft/Flutter-Compiler
@@ -60,8 +58,7 @@ Accept all permissions when prompted.
 ## 🛠️ First-Run Setup
 
 On first launch, the plugin will:
-
-1. Show a welcome dialog (can be toggled in settings)
+1. Show a welcome dialog
 2. Install Flutter SDK in Termux (~1.5GB)
 3. Configure environment paths
 4. Verify with `flutter doctor`
@@ -70,60 +67,30 @@ On first launch, the plugin will:
 
 ## 🎮 Usage
 
-Access all features via:
+All features are available via:
+- **Acode Menu → Plugins → Flutter Compiler**
+- Plugin sidebar panel, with action buttons and settings
 
-```
-Acode Menu → Plugins → Flutter Compiler
-```
+### Commands Available
 
-Or open the sidebar panel for a modern UI with action buttons and settings.
-
-### Command Cheatsheet
-
-| Command             | Description                         |
-|---------------------|-------------------------------------|
-| Create Project      | Initialize new Flutter project      |
-| Flutter Doctor      | Verify installation                 |
-| Pub Get             | Install dependencies                |
-| Run App             | Launch on connected device          |
-| Build APK           | Generate release APK                |
-| Build AppBundle     | Generate Play Store bundle          |
-| FlutterFire Setup   | Configure Firebase                  |
-| Firebase Deploy     | Deploy to Firebase                  |
-| Clean Project       | Remove build files                  |
-| Repair Packages     | Fix dependency issues               |
-| Code Analysis       | Check for errors                    |
-| Format Code         | Format Dart code                    |
-| Run Tests           | Execute test suite                  |
-
----
-
-## 🚀 Flutter Development Workflow
-
-1. **Create a New Project**
-    - Open Acode's file manager
-    - Create a folder for your project (e.g. `my_app`)
-    - Use "Create Project" from the plugin UI
-
-2. **Write Your Code**
-    - Edit `lib/main.dart`, `pubspec.yaml`, and test files in Acode
-
-3. **Run Commands**
-    - Use the plugin UI for all Flutter/Dart actions
-
-4. **Debug & Build**
-    - Run `flutter run` and view logs in Termux or Acode X Terminal
-    - Build APK/AppBundle for release
-
-5. **Advanced**
-    - Hot reload: Save in Acode, press `r` in Termux
-    - Hot restart: Press `R` in Termux
-    - Run tests: Use "Run Tests" in plugin
-
-6. **Settings**
-    - Access advanced settings from the plugin UI
-    - Configure SDK path, theme, logging, and more
-    - Reset settings to defaults if needed
+| Menu Command         | Description                         |
+|----------------------|-------------------------------------|
+| Create Project       | Initialize new Flutter project      |
+| Flutter Doctor       | Verify installation                 |
+| Pub Get              | Install dependencies                |
+| Run App              | Launch on connected device          |
+| Build APK            | Generate release APK                |
+| Build AppBundle      | Generate Play Store bundle          |
+| FlutterFire Setup    | Configure Firebase                  |
+| Firebase Deploy      | Deploy to Firebase                  |
+| Clean Project        | Remove build files                  |
+| Repair Packages      | Fix dependency issues               |
+| Code Analysis        | Check for errors                    |
+| Format Code          | Format Dart code                    |
+| Run Tests            | Execute test suite                  |
+| ⚙️ Settings          | Configure plugin/debug mode         |
+| 📑 Changelog         | View [CHANGELOG.md](CHANGELOG.md)   |
+| ❓ Help & Support    | Links to docs, donations, issues    |
 
 ---
 
@@ -154,7 +121,6 @@ Or open the sidebar panel for a modern UI with action buttons and settings.
 ### Manual Installation
 
 If automatic setup fails, run in Termux:
-
 ```bash
 pkg update && pkg install git wget openjdk-17 dart
 wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.35.1-stable.tar.xz
@@ -173,6 +139,7 @@ source ~/.bashrc
 Flutter-Compiler/
 ├── plugin.json          # Metadata
 ├── main.js              # Core logic
+├── CHANGELOG.md         # Changelog
 ├── README.md            # Documentation
 └── assets/
     ├── flutter_icon.png
@@ -191,4 +158,17 @@ Flutter-Compiler/
 
 MIT © [Mikael Kraft](https://github.com/mikaelkraft)
 
-[![Acode Plugin](https://img.shields.io/badge/Acode-Plugin-green)](https://github.com/mikaelkraft/Flutter-Compiler)
+---
+
+## 📑 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
+---
+
+## 🔗 Repository
+
+[GitHub: Mikael Kraft / Flutter-Compiler](https://github.com/mikaelkraft/Flutter-Compiler)
+
+---
+
