@@ -7,6 +7,7 @@
   "icon": "assets/flutter_icon.png",
   "files": [
     "main.js",
+    "CHANGELOG.md",
     "README.md",
     "assets/flutter_icon.png",
     "assets/termux_install.sh"
