@@ -3,12 +3,14 @@
 // Version 1.0.9 (patched for UI/menu + safe install)
 
 class FlutterCompiler {
+  // Simplified configuration
   static config = {
     termuxPath: "$HOME/flutter/bin",
-    preferLocal: true,
+    preferLocal: true, // Always true now
     debugMode: false
   };
 
+  /* [INITIALIZATION] */
   static async init() {
     try {
       const savedConfig = await acode.getSecureConfig("flutter_compiler");
@@ -18,12 +20,13 @@ class FlutterCompiler {
           this.config = { 
             ...this.config, 
             ...parsed,
-            preferLocal: true
+            preferLocal: true // Force local mode
           };
         } catch (e) {
           this._log(`Saved config parse failed: ${e.message}`, true);
         }
       }
+      
       if (!(await this._checkFlutterExists())) {
         await this._installFlutter();
       }
@@ -60,11 +63,13 @@ class FlutterCompiler {
     }
   }
 
+  /* [CORE EXECUTION] */
   static async execute(command) {
     this._log(`Executing: ${command}`);
-    return await this._executeLocal(command);
+    return await this._executeLocal(command); // Always use local execution
   }
 
+  /* [LOCAL EXECUTION] */
   static async _executeLocal(command) {
     try {
       const projectDir = await editor.getProjectDir();
@@ -93,6 +98,7 @@ class FlutterCompiler {
     }
   }
 
+  /* [LOGGING] */
   static _log(message, isError = false) {
     if (!this.config.debugMode) return;
     const timestamp = new Date().toLocaleTimeString();
@@ -102,6 +108,7 @@ class FlutterCompiler {
     }
   }
 
+  /* [COMMAND SHORTCUTS] */
   static doctor = () => this.execute("flutter doctor --no-upgrade");
   static pubGet = () => this.execute("flutter pub get");
   static buildApk = () => this.execute("flutter build apk --release");
@@ -112,7 +119,7 @@ class FlutterCompiler {
   static test = () => this.execute("flutter test");
   static clean = () => this.execute("flutter clean");
   static repair = () => this.execute("flutter pub upgrade --major-versions");
-
+  
   static async createProject() {
     const projectDir = await editor.getProjectDir();
     if (!projectDir) {
@@ -120,12 +127,12 @@ class FlutterCompiler {
     }
     return this.execute("flutter create .");
   }
-
+  
   static async flutterfire() { 
     const res = await this.execute("dart pub global activate flutterfire_cli");
     return res.success ? this.execute("flutterfire configure") : res;
   }
-
+  
   static firebaseDeploy = () => this.execute("flutter pub run flutterfire_cli:flutterfire deploy");
 }
 
@@ -140,10 +147,8 @@ acode.on("install", async () => {
     const choiceIndex = await acode.confirm(
       "🎉 Flutter Compiler Installed!",
       `Transform your Android device into a Flutter development environment!
-
-Need help? Check the documentation or support the project.
-
-Tip: Access all plugin commands via the Plugins sidebar/menu in Acode.`,
+      
+Need help? Check the documentation or support the project.`,
       buttons
     );
     let choice = null;
@@ -220,6 +225,7 @@ acode.setPluginMenu("❓ Help & Support", () => {
 
 /* --- Changelog Menu --- */
 acode.setPluginMenu("📑 Changelog", () => {
+  // Open CHANGELOG.md (dedicated changelog file)
   acode.openFile("CHANGELOG.md");
 });
 
