@@ -7,6 +7,7 @@
   "icon": "assets/flutter_icon.png",
   "files": [
     "main.js",
+    "settings.js",
     "CHANGELOG.md",
     "README.md",
     "assets/flutter_icon.png",
@@ -27,5 +28,6 @@
     "termux",
     "compiler"
   ],
-  "changelog": "CHANGELOG.md"
+  "changelog": "CHANGELOG.md",
+  "settings": "settings.js"
 }
