@@ -26,5 +26,6 @@
     "android",
     "termux",
     "compiler"
-  ]
+  ],
+  "changelog": "CHANGELOG.md"
 }
