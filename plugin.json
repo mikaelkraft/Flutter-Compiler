@@ -20,6 +20,7 @@
     "github": "mikaelkraft"
   },
   "license": "MIT",
+  "price": "0",
   "keywords": [
     "flutter",
     "dart",
@@ -28,5 +29,5 @@
     "termux",
     "compiler"
   ],
-  "changelog": "CHANGELOG.md"
+  "changelogs": "CHANGELOG.md"
 }
