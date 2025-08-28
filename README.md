@@ -35,18 +35,27 @@
 1. [Acode Editor](https://play.google.com/store/apps/details?id=com.foxdebug.acodefree)
 2. [Termux (F-Droid)](https://f-droid.org/en/packages/com.termux/)
 3. [Termux:API (F-Droid)](https://f-droid.org/en/packages/com.termux.api/)
-4. [Acode X Terminal Plugin](https://acode.foxdebug.com/plugins) (optional, for terminal integration)
+4. [Acode X Terminal Plugin](https://acode.foxdebug.com/plugins) (recommended for terminal integration)
 
 ### Installation
 
 **Via Acode:**  
+- Go to:  
+  `Settings → Plugins → Install from ZIP`  
+- Select your zipped plugin, ensuring the following structure (files at root):
+
 ```
-Settings → Plugins → Install from URL:
-https://github.com/mikaelkraft/Flutter-Compiler
+main.js
+plugin.json
+README.md
+CHANGELOG.md
+assets/
+  flutter_icon.png
+  termux_install.sh
 ```
 
 **Via Termux:**  
-```
+```bash
 pkg install git
 git clone https://github.com/mikaelkraft/Flutter-Compiler
 acode install Flutter-Compiler
@@ -91,6 +100,9 @@ All features are available via:
 | ⚙️ Settings          | Configure plugin/debug mode         |
 | 📑 Changelog         | View [CHANGELOG.md](CHANGELOG.md)   |
 | ❓ Help & Support    | Links to docs, donations, issues    |
+
+> **Note:** Menus and commands are available in the **Plugins** sidebar after installing the plugin.  
+> If you only see documentation, check your ZIP structure and ensure `"main"` is set to `"main.js"` in `plugin.json`.
 
 ---
 
@@ -138,13 +150,16 @@ source ~/.bashrc
 ```
 Flutter-Compiler/
 ├── plugin.json          # Metadata
-├── main.js              # Core logic
+├── main.js              # Core logic (Acode plugin format)
 ├── CHANGELOG.md         # Changelog
 ├── README.md            # Documentation
 └── assets/
     ├── flutter_icon.png
     └── termux_install.sh # Auto-installer
 ```
+
+- **main.js** must use `module.exports` and register menus in `init(acode)` to show commands!
+- **plugin.json** must include `"main": "main.js"` and `"files": [...]` listing all plugin files at the root level.
 
 ### Requirements
 
@@ -171,4 +186,3 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 [GitHub: Mikael Kraft / Flutter-Compiler](https://github.com/mikaelkraft/Flutter-Compiler)
 
 ---
-
