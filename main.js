@@ -1,17 +1,25 @@
-// Flutter Compiler for Acode - Local Only Version (Acode Plugin Format)
+// Flutter Compiler for Acode - Enhanced UX Edition
 // By Mikael Kraft (@mikaelkraft)
-// Version 1.0.9
+// Version 1.1.0
 
 module.exports = {
   /** Called once when plugin is loaded */
   async init(acode) {
-    // FlutterCompiler logic as a closure (not static class)
+    // --- Config ---
     const config = {
       termuxPath: "$HOME/flutter/bin",
-      preferLocal: true,
-      debugMode: false
+      debugMode: false,
+      theme: "default" // "neural", "neon", "default"
     };
 
+    // --- Theme definitions ---
+    const themes = {
+      default: { name: "Acode Default", accent: "#2196f3", bg: "#232323", fg: "#fafafa" },
+      neural:  { name: "Neural Futuristic", accent: "#3fffa3", bg: "#181826", fg: "#b0ffef" },
+      neon:    { name: "Neon Night", accent: "#ff00cc", bg: "#1a0033", fg: "#ffeeff" }
+    };
+
+    // --- Utilities ---
     async function getProjectDir() {
       if (typeof editor !== "undefined" && editor.getProjectDir) {
         return await editor.getProjectDir();
@@ -21,7 +29,6 @@ module.exports = {
       }
       return null;
     }
-
     async function getSecureConfig(key) {
       if (acode.getSecureConfig) return await acode.getSecureConfig(key);
       return null;
@@ -29,7 +36,6 @@ module.exports = {
     async function setSecureConfig(key, value) {
       if (acode.setSecureConfig) return await acode.setSecureConfig(key, value);
     }
-
     function log(message, isError = false) {
       if (!config.debugMode) return;
       const timestamp = new Date().toLocaleTimeString();
@@ -38,21 +44,64 @@ module.exports = {
         acode.toast(`Flutter: ${String(message).substring(0, 50)}`, 3000);
       }
     }
+    function applyTheme(themeKey) {
+      const t = themes[themeKey] || themes["default"];
+      if (acode.applyTheme) {
+        acode.applyTheme({
+          accent: t.accent,
+          background: t.bg,
+          foreground: t.fg,
+          name: t.name,
+        });
+      } else {
+        // fallback: set CSS vars
+        document.documentElement.style.setProperty("--accent", t.accent);
+        document.documentElement.style.setProperty("--background", t.bg);
+        document.documentElement.style.setProperty("--foreground", t.fg);
+      }
+      config.theme = themeKey;
+    }
 
-    // Initialization logic
+    // --- Loader ---
+    function showLoader(msg = "Processing...") {
+      if (acode.showLoader) return acode.showLoader(msg);
+      const loader = document.createElement("div");
+      loader.textContent = msg;
+      loader.style = "position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);color:#fff;background:#333;padding:2em 3em;border-radius:1em;box-shadow:0 0 40px #2196f3;z-index:9999;font-size:1.3em;";
+      loader.id = "flutter-loader";
+      document.body.appendChild(loader);
+      return () => { document.body.removeChild(loader); };
+    }
+
+    // --- Notification ---
+    function showNotification(title, message, actions) {
+      if (acode.showNotification) {
+        acode.showNotification(title, message, actions);
+      } else {
+        acode.toast(`[${title}] ${message}`, 4000);
+      }
+    }
+
+    // --- Initialization logic ---
     async function initialize() {
       try {
         const savedConfig = await getSecureConfig("flutter_compiler");
         if (savedConfig) {
           try {
             const parsed = JSON.parse(savedConfig);
-            Object.assign(config, parsed, { preferLocal: true });
+            Object.assign(config, parsed);
           } catch (e) {
             log(`Saved config parse failed: ${e.message}`, true);
           }
         }
+        applyTheme(config.theme || "default");
         if (!(await checkFlutterExists())) {
+          const hideLoader = showLoader("Installing Flutter SDK...");
           await installFlutter();
+          hideLoader && hideLoader();
+          showNotification("Flutter SDK", "Installation complete", [
+            { text: "Doctor", onclick: commands.doctor }
+          ]);
         }
       } catch (e) {
         log(`Initialization failed: ${e && e.message ? e.message : e}`, true);
@@ -67,7 +116,6 @@ module.exports = {
         return false;
       }
     }
-
     async function installFlutter() {
       const INSTALL_CMD = `
         pkg update -y && 
@@ -86,12 +134,22 @@ module.exports = {
         throw e;
       }
     }
-
     async function execute(command) {
       log(`Executing: ${command}`);
-      return await executeLocal(command);
+      const hideLoader = showLoader("Running command...");
+      try {
+        const res = await executeLocal(command);
+        hideLoader && hideLoader();
+        showNotification("Command Finished", res.message || "Done", [
+          { text: "View Output", onclick: () => acode.showMessage(res.output || "No output") }
+        ]);
+        return res;
+      } catch (err) {
+        hideLoader && hideLoader();
+        acode.toast("❌ Command failed");
+        throw err;
+      }
     }
-
     async function executeLocal(command) {
       try {
         const projectDir = await getProjectDir();
@@ -120,7 +178,7 @@ module.exports = {
       }
     }
 
-    // Command shortcuts
+    // --- Command shortcuts ---
     const commands = {
       doctor: () => execute("flutter doctor --no-upgrade"),
       pubGet: () => execute("flutter pub get"),
@@ -132,12 +190,15 @@ module.exports = {
       test: () => execute("flutter test"),
       clean: () => execute("flutter clean"),
       repair: () => execute("flutter pub upgrade --major-versions"),
-      createProject: async () => {
+      createProject: async (opts) => {
         const projectDir = await getProjectDir();
         if (!projectDir) {
           return { success: false, message: "❌ Please open a project directory first" };
         }
-        return execute("flutter create .");
+        let cmd = "flutter create .";
+        if (opts && opts.lang) cmd += ` --project-language=${opts.lang}`;
+        if (opts && opts.platforms) cmd += ` --platforms=${opts.platforms}`;
+        return execute(cmd);
       },
       flutterfire: async () => {
         const res = await execute("dart pub global activate flutterfire_cli");
@@ -146,39 +207,94 @@ module.exports = {
       firebaseDeploy: () => execute("flutter pub run flutterfire_cli:flutterfire deploy")
     };
 
-    // Menu registration (Acode format)
+    // --- Custom Dialog for Project Creation ---
+    function showCustomProjectDialog() {
+      if (acode.showCustomDialog) {
+        acode.showCustomDialog({
+          title: "🆕 Create Flutter Project",
+          html: `
+            <div style="padding:1em">
+              <label>Project Language:</label>
+              <select id="proj-lang">
+                <option value="dart">Dart</option>
+                <option value="kotlin">Kotlin (Android)</option>
+                <option value="swift">Swift (iOS)</option>
+              </select>
+              <br><br>
+              <label>Platforms:</label>
+              <input type="text" id="proj-platforms" placeholder="android,ios,web" value="android,ios">
+              <br><br>
+              <button id="proj-create-btn">Create</button>
+            </div>
+          `,
+          onLoad(dialog) {
+            dialog.querySelector("#proj-create-btn").onclick = async () => {
+              const lang = dialog.querySelector("#proj-lang").value;
+              const platforms = dialog.querySelector("#proj-platforms").value;
+              dialog.close();
+              await commands.createProject({ lang, platforms });
+            };
+          }
+        });
+      } else {
+        // fallback: simple prompt dialog
+        acode.showInputDialog("Create Flutter Project", [
+          { label: "Project Language", type: "select", options: ["dart", "kotlin", "swift"], value: "dart" },
+          { label: "Platforms (comma separated)", type: "text", value: "android,ios" }
+        ], async values => {
+          await commands.createProject({ lang: values[0], platforms: values[1] });
+        });
+      }
+    }
+
+    // --- Menu registration ---
+    acode.setPluginMenu("🆕 Create Project (Dialog)", showCustomProjectDialog);
+
+    acode.setPluginMenu("🩺 Flutter Doctor", commands.doctor);
+    acode.setPluginMenu("📦 Pub Get", commands.pubGet);
+    acode.setPluginMenu("🚀 Run App", commands.runApp);
+    acode.setPluginMenu("🔧 Build APK", commands.buildApk);
+    acode.setPluginMenu("📦 Build AppBundle", commands.buildAppBundle);
+    acode.setPluginMenu("🔥 FlutterFire Setup", commands.flutterfire);
+    acode.setPluginMenu("☁️ Firebase Deploy", commands.firebaseDeploy);
+    acode.setPluginMenu("🧹 Clean Project", commands.clean);
+    acode.setPluginMenu("🔄 Repair Packages", commands.repair);
+    acode.setPluginMenu("🔍 Code Analysis", commands.analyze);
+    acode.setPluginMenu("✨ Format Code", commands.format);
+    acode.setPluginMenu("🧪 Run Tests", commands.test);
+
+    // --- Theme Switcher ---
+    acode.setPluginMenu("💡 Theme Switcher", () => {
+      acode.showPicker("Choose Plugin Theme", Object.keys(themes).map(k => themes[k].name), idx => {
+        const selectedKey = Object.keys(themes)[idx];
+        applyTheme(selectedKey);
+        setSecureConfig("flutter_compiler", JSON.stringify(config));
+        acode.toast(`Theme set: ${themes[selectedKey].name}`);
+      });
+    });
+
+    // --- Changelog & Support ---
+    acode.setPluginMenu("📑 Changelog", () => acode.openFile("CHANGELOG.md"));
     acode.setPluginMenu("❓ Help & Support", () => {
       const supportOptions = [
         "📚 Documentation",
-        "💖 Sponsor Development", 
+        "💖 Sponsor Development",
         "🐛 Report Issues",
         "💬 Join Community"
       ];
       acode.showPicker(
         "Flutter Compiler - Support",
         supportOptions,
-        (selected) => {
-          let selIndex = -1;
-          if (typeof selected === "number") {
-            selIndex = selected;
-          } else if (typeof selected === "string") {
-            selIndex = supportOptions.indexOf(selected);
-          }
+        selIndex => {
           const actions = {
             0: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki"),
             1: () => {
               const donationOptions = [
                 "GitHub Sponsors (Monthly)",
-                "Buy Me a Coffee (One-time)", 
+                "Buy Me a Coffee (One-time)",
                 "Copy Crypto Address (USDT on ERC20)"
               ];
-              acode.showPicker("Support Options", donationOptions, (donationChoice) => {
-                let dIndex = -1;
-                if (typeof donationChoice === "number") {
-                  dIndex = donationChoice;
-                } else if (typeof donationChoice === "string") {
-                  dIndex = donationOptions.indexOf(donationChoice);
-                }
+              acode.showPicker("Support Options", donationOptions, dIndex => {
                 const urls = {
                   0: "https://github.com/sponsors/mikaelkraft",
                   1: "https://ko-fi.com/mikaelkraft",
@@ -195,81 +311,25 @@ module.exports = {
             2: () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/issues"),
             3: () => acode.launchUrl("https://discord.gg/UPJGA6sTvh")
           };
-          if (actions[selIndex]) {
-            actions[selIndex]();
-          }
+          if (actions[selIndex]) actions[selIndex]();
         }
       );
     });
 
-    acode.setPluginMenu("📑 Changelog", () => {
-      acode.openFile("CHANGELOG.md");
-    });
-
+    // --- Settings Dialog ---
     acode.setPluginMenu("⚙️ Settings", () => {
-      const inputFields = [
-        {
-          label: "Debug Mode",
-          type: "checkbox",
-          checked: !!config.debugMode
-        }
-      ];
-      acode.showInputDialog("Compiler Settings", inputFields, async (values) => {
-        try {
-          let debugVal = false;
-          if (Array.isArray(values)) {
-            debugVal = !!values[0];
-          } else if (values && typeof values === "object" && "0" in values) {
-            debugVal = !!values[0];
-          } else if (typeof values === "boolean") {
-            debugVal = values;
-          }
-          config.debugMode = debugVal;
-          await setSecureConfig("flutter_compiler", JSON.stringify(config));
-          acode.toast("✅ Settings saved");
-        } catch (e) {
-          log(`Settings save failed: ${e && e.message ? e.message : e}`, true);
-          acode.toast("❌ Failed to save settings");
-        }
+      acode.showInputDialog("Compiler Settings", [
+        { label: "Debug Mode", type: "checkbox", checked: !!config.debugMode },
+        { label: "Flutter SDK Path", type: "text", value: config.termuxPath }
+      ], async values => {
+        config.debugMode = !!values[0];
+        config.termuxPath = values[1] || config.termuxPath;
+        await setSecureConfig("flutter_compiler", JSON.stringify(config));
+        acode.toast("✅ Settings saved");
       });
     });
 
-    // Command Menus
-    const commandMenuItems = [
-      { icon: "🆕", name: "Create Project", cmd: "createProject" },
-      { icon: "🩺", name: "Flutter Doctor", cmd: "doctor" },
-      { icon: "📦", name: "Pub Get", cmd: "pubGet" },
-      { icon: "🚀", name: "Run App", cmd: "runApp" },
-      { icon: "🔧", name: "Build APK", cmd: "buildApk" },
-      { icon: "📦", name: "Build AppBundle", cmd: "buildAppBundle" },
-      { icon: "🔥", name: "FlutterFire Setup", cmd: "flutterfire" },
-      { icon: "☁️", name: "Firebase Deploy", cmd: "firebaseDeploy" },
-      { icon: "🧹", name: "Clean Project", cmd: "clean" },
-      { icon: "🔄", name: "Repair Packages", cmd: "repair" },
-      { icon: "🔍", name: "Code Analysis", cmd: "analyze" },
-      { icon: "✨", name: "Format Code", cmd: "format" },
-      { icon: "🧪", name: "Run Tests", cmd: "test" }
-    ];
-    for (let i = 0; i < commandMenuItems.length; i++) {
-      const item = commandMenuItems[i];
-      acode.setPluginMenu(`${item.icon} ${item.name}`, () => {
-        commands[item.cmd]().then(res => {
-          if (res && res.message) {
-            acode.toast(res.message);
-          } else {
-            acode.toast("✅ Command finished");
-          }
-          if (res && res.error) {
-            log(`Error: ${res.error}`, true);
-          }
-        }).catch(error => {
-          acode.toast(`❌ Failed: ${error && error.message ? error.message : error}`);
-          log(`Execution error: ${error}`, true);
-        });
-      });
-    }
-
-    // Project Validation on Startup (optional)
+    // --- Project Validation ---
     if (acode.on) {
       acode.on("editorOpen", async () => {
         try {
@@ -286,32 +346,29 @@ module.exports = {
       });
     }
 
-    // Do initialization
+    // --- Initialization ---
     await initialize();
 
-    // Install dialog
+    // --- Install dialog ---
     if (acode.on) {
       acode.on("install", async () => {
         try {
-          const buttons = ["Get Started", "View Docs", "Donate"];
-          const choiceIndex = await acode.confirm(
-            "🎉 Flutter Compiler Installed!",
-            `Transform your Android device into a Flutter development environment!
-            
-Need help? Check the documentation or support the project.`,
-            buttons
-          );
-          let choice = null;
-          if (typeof choiceIndex === "number") {
-            choice = buttons[choiceIndex];
-          } else if (typeof choiceIndex === "string") {
-            choice = choiceIndex;
-          }
-          if (choice === "View Docs") {
-            acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki");
-          } else if (choice === "Donate") {
-            acode.launchUrl("https://github.com/sponsors/mikaelkraft");
-          }
+          acode.showCustomDialog({
+            title: "🎉 Flutter Compiler Installed!",
+            html: `
+              <div style="padding:1em">
+                <b>Transform your Android device into a Flutter dev environment!</b><br>
+                <small>Need help? Check <a href="https://github.com/mikaelkraft/Flutter-Compiler/wiki" target="_blank">documentation</a> or <a href="https://github.com/sponsors/mikaelkraft" target="_blank">support</a> the project.</small>
+                <br><br>
+                <button id="doc-btn">View Docs</button>
+                <button id="donate-btn">Donate</button>
+              </div>
+            `,
+            onLoad(dialog) {
+              dialog.querySelector("#doc-btn").onclick = () => acode.launchUrl("https://github.com/mikaelkraft/Flutter-Compiler/wiki");
+              dialog.querySelector("#donate-btn").onclick = () => acode.launchUrl("https://github.com/sponsors/mikaelkraft");
+            }
+          });
         } catch (e) {
           log(`Install dialog failed: ${e && e.message ? e.message : e}`, true);
         }
