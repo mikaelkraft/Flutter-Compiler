@@ -14,7 +14,6 @@
     "assets/termux_install.sh"
   ],
   "minVersionCode": 290,
-  "repository": "https://github.com/mikaelkraft/Flutter-Compiler",
   "author": {
     "name": "Mikael Kraft",
     "github": "mikaelkraft"
