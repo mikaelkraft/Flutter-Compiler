@@ -1,28 +1,10 @@
 {
-  "id": "com.mikaelkraft.fluttercompiler",
+  "id": "com.mikaelkraft.fluttercompiler.baseline",
   "name": "Flutter Compiler",
-  "version": "1.1.0",
+  "version": "0.0.1",
   "main": "main.js",
-
-  "icon": "",
-  "readme": "README.md",
-  "changelogs": "CHANGELOG.md",
-
   "files": [
-    "main.js",
     "plugin.json",
-    "README.md",
-    "CHANGELOG.md"
-  ],
-
-  "license": "",
-
-  "keywords": [
-    "flutter",
-    "dart",
-    "termux",
-    "android",
-    "build",
-    "run"
+    "main.js"
   ]
 }
