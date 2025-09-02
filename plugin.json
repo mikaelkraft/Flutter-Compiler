@@ -1,32 +1,28 @@
 {
   "id": "com.mikaelkraft.fluttercompiler",
   "name": "Flutter Compiler",
-  "main": "main.js",
   "version": "1.1.0",
+  "main": "main.js",
+
+  "icon": "",
   "readme": "README.md",
-  "icon": "assets/flutter_icon.png",
+  "changelogs": "CHANGELOG.md",
+
   "files": [
     "main.js",
-    "CHANGELOG.md",
-    "README.md",
     "plugin.json",
-    "assets/flutter_icon.png",
-    "assets/termux_install.sh"
+    "README.md",
+    "CHANGELOG.md"
   ],
-  "minVersionCode": 290,
-  "author": {
-    "name": "Mikael Kraft",
-    "github": "mikaelkraft"
-  },
+
   "license": "",
-  "price": "0",
+
   "keywords": [
     "flutter",
     "dart",
-    "mobile-development",
-    "android",
     "termux",
-    "compiler"
-  ],
-  "changelogs": "CHANGELOG.md"
+    "android",
+    "build",
+    "run"
+  ]
 }
