@@ -27,7 +27,7 @@
     - Changelog (see [CHANGELOG.md](CHANGELOG.md))
 
 ---
-
+W
 ## 📥 Installation
 
 ### Prerequisites
